@@ -1,0 +1,33 @@
+package views
+
+templ HomePage() {
+	@Layout("Home") {
+		<div class="space-y-8">
+			<div>
+				<h1 class="text-3xl font-bold text-gray-900">Welcome to cracked-pm</h1>
+				<p class="mt-2 text-gray-600">
+					A Go web application built with Fiber, sqlx, htmx, and TailwindCSS.
+				</p>
+			</div>
+			<div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+				<h2 class="text-xl font-semibold mb-4">htmx Example</h2>
+				<p class="text-gray-600 mb-4">Click the button to fetch server time via htmx:</p>
+				<button
+					hx-get="/api/time"
+					hx-target="#time-display"
+					hx-swap="innerHTML"
+					class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors cursor-pointer"
+				>
+					Get Server Time
+				</button>
+				<div id="time-display" class="mt-4 text-gray-700 font-mono"></div>
+			</div>
+		</div>
+	}
+}
+
+templ TimeDisplay(timeStr string) {
+	<p class="text-lg">
+		Server time: <span class="font-semibold">{ timeStr }</span>
+	</p>
+}

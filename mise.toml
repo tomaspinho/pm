@@ -1,0 +1,128 @@
+min_version = "2024.11.0"
+
+[env]
+_.file = ".env"
+_.path = ["./bin"]
+
+[tools]
+go = "1.25"
+air = "latest"
+golangci-lint = "latest"
+"ubi:tailwindlabs/tailwindcss" = "4.1.18"
+"ubi:pressly/goose" = "3.26.0"
+"ubi:a-h/templ" = "0.3.977"
+
+# -----------------------------------------------------------------------------
+# Development
+# -----------------------------------------------------------------------------
+
+[tasks.dev]
+description = "Start dev server with Air hot-reload"
+depends = ["templ:generate", "css:build"]
+run = "air -c .air.toml"
+
+[tasks."dev:css"]
+description = "Run TailwindCSS in watch mode (separate terminal)"
+run = "tailwindcss -i ./styles/input.css -o ./static/css/output.css --watch"
+
+# -----------------------------------------------------------------------------
+# Build
+# -----------------------------------------------------------------------------
+
+[tasks."templ:generate"]
+description = "Generate Go code from .templ files"
+run = "templ generate"
+sources = ["views/**/*.templ"]
+outputs = ["views/**/*_templ.go"]
+
+[tasks."css:build"]
+description = "Build and minify TailwindCSS"
+run = "tailwindcss -i ./styles/input.css -o ./static/css/output.css --minify"
+sources = ["styles/input.css", "views/**/*.templ"]
+outputs = ["static/css/output.css"]
+
+[tasks.build]
+description = "Production build"
+depends = ["templ:generate", "css:build"]
+run = "go build -trimpath -o ./bin/server ./cmd/server"
+sources = ["go.mod", "go.sum", "**/*.go"]
+outputs = ["bin/server"]
+
+# -----------------------------------------------------------------------------
+# Test
+# -----------------------------------------------------------------------------
+
+[tasks.test]
+description = "Run all tests"
+run = "go test ./..."
+
+[tasks."test:verbose"]
+description = "Run all tests with verbose output"
+run = "go test -v ./..."
+
+[tasks."test:run"]
+description = 'Run a single test by name (mise run test:run -- TestFoo)'
+run = 'go test -v -run {{arg(name="pattern")}} ./...'
+
+[tasks."test:coverage"]
+description = "Run tests with coverage report"
+run = ["go test -coverprofile=coverage.out ./...", "go tool cover -html=coverage.out -o coverage.html"]
+
+# -----------------------------------------------------------------------------
+# Lint
+# -----------------------------------------------------------------------------
+
+[tasks.lint]
+description = "Run all linters"
+depends = ["templ:generate"]
+run = ["go vet ./...", "golangci-lint run"]
+
+[tasks."lint:fix"]
+description = "Run linters and auto-fix"
+depends = ["templ:generate"]
+run = "golangci-lint run --fix"
+
+# -----------------------------------------------------------------------------
+# Database
+# -----------------------------------------------------------------------------
+
+[tasks."db:up"]
+description = "Run all pending migrations"
+run = 'goose -dir migrations postgres "$DATABASE_URL" up'
+
+[tasks."db:down"]
+description = "Rollback the last migration"
+run = 'goose -dir migrations postgres "$DATABASE_URL" down'
+
+[tasks."db:status"]
+description = "Show migration status"
+run = 'goose -dir migrations postgres "$DATABASE_URL" status'
+
+[tasks."db:create"]
+description = 'Create a new migration file (mise run db:create -- <name>)'
+run = 'goose -dir migrations create {{arg(name="migration_name")}} sql'
+
+[tasks."db:reset"]
+description = "Rollback all migrations then re-apply"
+run = ['goose -dir migrations postgres "$DATABASE_URL" reset', 'goose -dir migrations postgres "$DATABASE_URL" up']
+
+# -----------------------------------------------------------------------------
+# Setup
+# -----------------------------------------------------------------------------
+
+[tasks.setup]
+description = "Install all tools and dependencies"
+run = [
+    "mise install",
+    "go mod download",
+    "templ generate",
+    "tailwindcss -i ./styles/input.css -o ./static/css/output.css",
+]
+
+# -----------------------------------------------------------------------------
+# CI
+# -----------------------------------------------------------------------------
+
+[tasks.ci]
+description = "Run all CI checks (build + lint + test)"
+depends = ["build", "lint", "test"]

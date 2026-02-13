@@ -1,0 +1,30 @@
+# Build artifacts
+/bin/
+/tmp/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test
+coverage.out
+coverage.html
+
+# Environment
+.env
+
+# Generated files
+static/css/output.css
+views/**/*_templ.go
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~

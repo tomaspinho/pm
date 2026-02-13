@@ -1,0 +1,32 @@
+root = "."
+tmp_dir = "tmp"
+
+[build]
+  pre_cmd = ["templ generate"]
+  cmd = "go build -o ./tmp/main ./cmd/server"
+  bin = "./tmp/main"
+  include_ext = ["go", "templ", "html"]
+  exclude_dir = ["assets", "tmp", "vendor", "node_modules", "static", "migrations"]
+  exclude_regex = ["_test\\.go$", "_templ\\.go$"]
+  exclude_unchanged = true
+  delay = 200
+  stop_on_error = true
+  send_interrupt = true
+  kill_delay = 500
+
+[log]
+  time = false
+  main_only = false
+
+[color]
+  main = "magenta"
+  watcher = "cyan"
+  build = "yellow"
+  runner = "green"
+
+[misc]
+  clean_on_exit = true
+
+[screen]
+  clear_on_rebuild = true
+  keep_scroll = true
