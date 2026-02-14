@@ -291,3 +291,40 @@ func (h *Handler) HandleDeleteMetadata(c fiber.Ctx) error {
 
 	return render(c, views.MetadataSection(taskID, task.Metadata))
 }
+
+// HandleUpdateStatus updates a task's status and moves it to the end of the new column.
+// PATCH /tasks/:id/status
+func (h *Handler) HandleUpdateStatus(c fiber.Ctx) error {
+	taskID, err := strconv.ParseInt(c.Params("id"), 10, 64)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "invalid task id")
+	}
+
+	newStatus := c.FormValue("status")
+	if newStatus == "" {
+		return fiber.NewError(fiber.StatusBadRequest, "status is required")
+	}
+
+	// Validate status
+	validStatuses := map[string]bool{
+		"todo":        true,
+		"in_progress": true,
+		"done":        true,
+	}
+	if !validStatuses[newStatus] {
+		return fiber.NewError(fiber.StatusBadRequest, "invalid status")
+	}
+
+	err = h.store.UpdateTaskStatus(c.Context(), taskID, newStatus)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to update status")
+	}
+
+	// Return the updated task detail pane
+	taskWithDeps, err := h.store.GetTaskWithDependencies(c.Context(), taskID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to reload task")
+	}
+
+	return render(c, views.TaskDetailPane(*taskWithDeps))
+}

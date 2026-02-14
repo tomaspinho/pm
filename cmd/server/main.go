@@ -71,6 +71,7 @@ func main() {
 	app.Delete("/tasks/:id", h.HandleDeleteTask)
 	app.Get("/tasks/:id/detail", h.HandleTaskDetail)
 	app.Patch("/tasks/:id", h.HandleUpdateTask)
+	app.Patch("/tasks/:id/status", h.HandleUpdateStatus)
 	app.Post("/tasks/:id/dependencies", h.HandleAddDependency)
 	app.Delete("/tasks/:id/dependencies/:depID", h.HandleRemoveDependency)
 	app.Post("/tasks/:id/metadata", h.HandleAddMetadata)

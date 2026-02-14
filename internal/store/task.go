@@ -232,3 +232,55 @@ func (s *Store) DeleteMetadataKey(ctx context.Context, taskID int64, key string)
 	}
 	return nil
 }
+
+// UpdateTaskStatus updates a task's status and moves it to the end of the new column.
+func (s *Store) UpdateTaskStatus(ctx context.Context, taskID int64, newStatus string) error {
+	tx, err := s.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("beginning transaction: %w", err)
+	}
+	defer tx.Rollback() //nolint:errcheck
+
+	// Get the task's current state
+	var task model.Task
+	if err := tx.GetContext(ctx, &task, "SELECT * FROM tasks WHERE id = $1 AND deleted_at IS NULL FOR UPDATE", taskID); err != nil {
+		return fmt.Errorf("getting task %d: %w", taskID, err)
+	}
+
+	// If status hasn't changed, nothing to do
+	if task.Status == newStatus {
+		return nil
+	}
+
+	// Close gap in old column
+	_, err = tx.ExecContext(ctx,
+		"UPDATE tasks SET position = position - 1, updated_at = now() WHERE project_id = $1 AND status = $2 AND position > $3 AND deleted_at IS NULL",
+		task.ProjectID, task.Status, task.Position,
+	)
+	if err != nil {
+		return fmt.Errorf("closing gap in old column: %w", err)
+	}
+
+	// Get max position in new column
+	var maxPos int
+	err = tx.GetContext(ctx, &maxPos,
+		"SELECT COALESCE(MAX(position), -1) FROM tasks WHERE project_id = $1 AND status = $2 AND deleted_at IS NULL",
+		task.ProjectID, newStatus)
+	if err != nil {
+		return fmt.Errorf("getting max position in new column: %w", err)
+	}
+
+	// Move task to end of new column
+	_, err = tx.ExecContext(ctx,
+		"UPDATE tasks SET status = $1, position = $2, updated_at = NOW() WHERE id = $3",
+		newStatus, maxPos+1, taskID,
+	)
+	if err != nil {
+		return fmt.Errorf("updating task status: %w", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("committing transaction: %w", err)
+	}
+	return nil
+}
