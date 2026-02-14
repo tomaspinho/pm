@@ -174,13 +174,13 @@ func (h *Handler) HandleUpdateTask(c fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to update task")
 	}
 
-	// Return the updated task detail pane
+	// Return OOB updates for the edited fields only
 	taskWithDeps, err := h.store.GetTaskWithDependencies(c.Context(), taskID)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to reload task")
 	}
 
-	return render(c, views.TaskDetailPane(*taskWithDeps))
+	return render(c, views.TaskFieldUpdateResponse(*taskWithDeps))
 }
 
 // HandleAddDependency adds a dependency to a task.

@@ -142,10 +142,17 @@ templ MetadataSection(taskID int64, metadata model.TaskMetadata) {
 	@components.MetadataSection(taskID, metadata)
 }
 
-// StatusUpdateResponse returns the updated detail pane plus OOB updates for affected kanban columns.
+// TaskFieldUpdateResponse returns OOB updates for individual task fields (no full pane reload).
+templ TaskFieldUpdateResponse(taskWithDeps model.TaskWithDependencies) {
+	@components.TitleDisplay(taskWithDeps)
+	@components.DescriptionDisplay(taskWithDeps)
+	@components.AuthorDisplay(taskWithDeps)
+}
+
+// StatusUpdateResponse returns OOB updates for status badge and kanban columns (no full pane reload).
 templ StatusUpdateResponse(taskWithDeps model.TaskWithDependencies, oldStatus string, tasksByStatus map[string][]model.Task) {
-	<!-- Main response: updated detail pane -->
-	@components.TaskDetailPane(taskWithDeps)
+	<!-- Update status badge -->
+	@components.StatusBadge(taskWithDeps)
 	if oldStatus != taskWithDeps.Status {
 		<!-- Out-of-band: update old status column task list -->
 		<div

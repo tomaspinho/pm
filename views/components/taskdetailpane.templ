@@ -66,8 +66,8 @@ templ TaskDetailPane(taskWithDeps model.TaskWithDependencies) {
 					>
 						<form
 							hx-patch={ "/tasks/" + fmt.Sprintf("%d", taskWithDeps.ID) }
-							hx-target="#detail-pane"
-							hx-swap="outerHTML"
+							hx-target="body"
+							hx-swap="none"
 						>
 							<input
 								type="text"
@@ -127,8 +127,8 @@ templ TaskDetailPane(taskWithDeps model.TaskWithDependencies) {
 					>
 						<form
 							hx-patch={ "/tasks/" + fmt.Sprintf("%d", taskWithDeps.ID) }
-							hx-target="#detail-pane"
-							hx-swap="outerHTML"
+							hx-target="body"
+							hx-swap="none"
 						>
 							<textarea
 								name="description"
@@ -186,8 +186,8 @@ templ TaskDetailPane(taskWithDeps model.TaskWithDependencies) {
 					>
 						<form
 							hx-patch={ "/tasks/" + fmt.Sprintf("%d", taskWithDeps.ID) }
-							hx-target="#detail-pane"
-							hx-swap="outerHTML"
+							hx-target="body"
+							hx-swap="none"
 						>
 							<input
 								type="text"
@@ -215,7 +215,7 @@ templ TaskDetailPane(taskWithDeps model.TaskWithDependencies) {
 				<!-- Status -->
 				<div class="space-y-2">
 					<label class="block text-xs font-medium text-gray-500 uppercase tracking-wide">Status</label>
-					<div class="relative">
+					<div class="relative" id={ "status-badge-" + fmt.Sprintf("%d", taskWithDeps.ID) }>
 						<!-- Clickable Status Badge -->
 						<button
 							type="button"
@@ -239,8 +239,8 @@ templ TaskDetailPane(taskWithDeps model.TaskWithDependencies) {
 									class={ "w-full text-left px-4 py-2 text-sm hover:bg-gray-100 transition-colors flex items-center justify-between", templ.KV("font-semibold text-indigo-800", status == taskWithDeps.Status), templ.KV("text-gray-700", status != taskWithDeps.Status) }
 									hx-patch={ "/tasks/" + fmt.Sprintf("%d", taskWithDeps.ID) + "/status" }
 									hx-vals={ fmt.Sprintf(`{"status": "%s"}`, status) }
-									hx-target="#detail-pane"
-									hx-swap="outerHTML"
+									hx-target="body"
+									hx-swap="none"
 								>
 									<span>{ model.StatusLabel(status) }</span>
 									if status == taskWithDeps.Status {
@@ -522,4 +522,144 @@ templ detailPaneScript() {
 		});
 	})();
 	</script>
+}
+
+// TitleDisplay renders just the title display section for OOB swaps
+templ TitleDisplay(taskWithDeps model.TaskWithDependencies) {
+	<div
+		class="editable-field group"
+		id={ "title-display-" + fmt.Sprintf("%d", taskWithDeps.ID) }
+		hx-swap-oob="true"
+	>
+		<div class="flex items-center gap-2">
+			<p
+				class="text-lg font-semibold text-gray-900 flex-1 cursor-pointer"
+				onclick={ showEditField(fmt.Sprintf("title-%d", taskWithDeps.ID)) }
+			>
+				{ taskWithDeps.Title }
+			</p>
+			<button
+				type="button"
+				class="edit-btn opacity-0 group-hover:opacity-100 transition-opacity text-gray-400"
+			>
+				<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+				</svg>
+			</button>
+		</div>
+	</div>
+	<div
+		class="editable-form hidden"
+		id={ "title-form-" + fmt.Sprintf("%d", taskWithDeps.ID) }
+		hx-swap-oob="true"
+	></div>
+}
+
+// DescriptionDisplay renders just the description display section for OOB swaps
+templ DescriptionDisplay(taskWithDeps model.TaskWithDependencies) {
+	<div
+		class="editable-field group"
+		id={ "description-display-" + fmt.Sprintf("%d", taskWithDeps.ID) }
+		hx-swap-oob="true"
+	>
+		<div class="flex items-start gap-2">
+			<p
+				class="text-sm text-gray-700 flex-1 whitespace-pre-wrap cursor-pointer"
+				onclick={ showEditField(fmt.Sprintf("description-%d", taskWithDeps.ID)) }
+			>
+				if taskWithDeps.Description != "" {
+					{ taskWithDeps.Description }
+				} else {
+					<span class="text-gray-400 italic">No description</span>
+				}
+			</p>
+			<button
+				type="button"
+				class="edit-btn opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 shrink-0"
+			>
+				<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+				</svg>
+			</button>
+		</div>
+	</div>
+	<div
+		class="editable-form hidden"
+		id={ "description-form-" + fmt.Sprintf("%d", taskWithDeps.ID) }
+		hx-swap-oob="true"
+	></div>
+}
+
+// AuthorDisplay renders just the author display section for OOB swaps
+templ AuthorDisplay(taskWithDeps model.TaskWithDependencies) {
+	<div
+		class="editable-field group"
+		id={ "author-display-" + fmt.Sprintf("%d", taskWithDeps.ID) }
+		hx-swap-oob="true"
+	>
+		<div class="flex items-center gap-2">
+			<p
+				class="text-sm text-gray-700 flex-1 cursor-pointer"
+				onclick={ showEditField(fmt.Sprintf("author-%d", taskWithDeps.ID)) }
+			>
+				if taskWithDeps.Author != "" {
+					{ taskWithDeps.Author }
+				} else {
+					<span class="text-gray-400 italic">No author</span>
+				}
+			</p>
+			<button
+				type="button"
+				class="edit-btn opacity-0 group-hover:opacity-100 transition-opacity text-gray-400"
+			>
+				<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+				</svg>
+			</button>
+		</div>
+	</div>
+	<div
+		class="editable-form hidden"
+		id={ "author-form-" + fmt.Sprintf("%d", taskWithDeps.ID) }
+		hx-swap-oob="true"
+	></div>
+}
+
+// StatusBadge renders just the status badge for OOB swaps (within status section)
+templ StatusBadge(taskWithDeps model.TaskWithDependencies) {
+	<div class="relative" id={ "status-badge-" + fmt.Sprintf("%d", taskWithDeps.ID) } hx-swap-oob="true">
+		<!-- Clickable Status Badge -->
+		<button
+			type="button"
+			class="inline-flex items-center gap-2 px-3 py-1 text-sm font-medium rounded-full bg-indigo-100 text-indigo-800 hover:bg-indigo-200 transition-colors cursor-pointer"
+			onclick={ toggleStatusDropdown(fmt.Sprintf("%d", taskWithDeps.ID)) }
+		>
+			<span>{ model.StatusLabel(taskWithDeps.Status) }</span>
+			<!-- Dropdown chevron icon -->
+			<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+			</svg>
+		</button>
+		<!-- Dropdown Menu (hidden by default) -->
+		<div
+			id={ "status-dropdown-" + fmt.Sprintf("%d", taskWithDeps.ID) }
+			class="hidden absolute top-full mt-2 left-0 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20 min-w-[150px]"
+		>
+			for _, status := range model.AllStatuses() {
+				<button
+					type="button"
+					class={ "w-full text-left px-4 py-2 text-sm hover:bg-gray-100 transition-colors flex items-center justify-between", templ.KV("font-semibold text-indigo-800", status == taskWithDeps.Status), templ.KV("text-gray-700", status != taskWithDeps.Status) }
+					hx-patch={ "/tasks/" + fmt.Sprintf("%d", taskWithDeps.ID) + "/status" }
+					hx-vals={ fmt.Sprintf(`{"status": "%s"}`, status) }
+					hx-target="body"
+					hx-swap="none"
+				>
+					<span>{ model.StatusLabel(status) }</span>
+					if status == taskWithDeps.Status {
+						<span>✓</span>
+					}
+				</button>
+			}
+		</div>
+	</div>
 }
