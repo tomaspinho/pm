@@ -293,6 +293,58 @@ func (h *Handler) HandleDeleteMetadata(c fiber.Ctx) error {
 	return render(c, views.MetadataSection(taskID, task.Metadata))
 }
 
+// HandleUpdateMetadata updates an existing metadata key-value pair.
+// PATCH /tasks/:id/metadata/:oldKey
+func (h *Handler) HandleUpdateMetadata(c fiber.Ctx) error {
+	taskID, err := strconv.ParseInt(c.Params("id"), 10, 64)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "invalid task id")
+	}
+
+	oldKey := c.Params("oldKey")
+	newKey := c.FormValue("key")
+	value := c.FormValue("value")
+
+	if oldKey == "" {
+		return fiber.NewError(fiber.StatusBadRequest, "old key is required")
+	}
+	if newKey == "" {
+		return fiber.NewError(fiber.StatusBadRequest, "new key is required")
+	}
+
+	// If key changed, delete old key first
+	if oldKey != newKey {
+		// Check if new key already exists
+		task, err := h.store.GetTask(c.Context(), taskID)
+		if err != nil {
+			return fiber.NewError(fiber.StatusInternalServerError, "failed to get task")
+		}
+		if _, exists := task.Metadata[newKey]; exists {
+			return fiber.NewError(fiber.StatusBadRequest, "key already exists")
+		}
+
+		// Delete old key
+		err = h.store.DeleteMetadataKey(c.Context(), taskID, oldKey)
+		if err != nil {
+			return fiber.NewError(fiber.StatusInternalServerError, "failed to delete old key")
+		}
+	}
+
+	// Set new key with value
+	err = h.store.SetMetadataKey(c.Context(), taskID, newKey, value)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to update metadata")
+	}
+
+	// Get updated task
+	task, err := h.store.GetTask(c.Context(), taskID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to reload task")
+	}
+
+	return render(c, views.MetadataSection(taskID, task.Metadata))
+}
+
 // HandleUpdateStatus updates a task's status and moves it to the end of the new column.
 // PATCH /tasks/:id/status
 func (h *Handler) HandleUpdateStatus(c fiber.Ctx) error {

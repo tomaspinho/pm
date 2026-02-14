@@ -75,6 +75,7 @@ func main() {
 	app.Post("/tasks/:id/dependencies", h.HandleAddDependency)
 	app.Delete("/tasks/:id/dependencies/:depID", h.HandleRemoveDependency)
 	app.Post("/tasks/:id/metadata", h.HandleAddMetadata)
+	app.Patch("/tasks/:id/metadata/:oldKey", h.HandleUpdateMetadata)
 	app.Delete("/tasks/:id/metadata/:key", h.HandleDeleteMetadata)
 
 	// Graceful shutdown.
