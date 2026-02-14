@@ -141,3 +141,49 @@ templ DependencySection(taskWithDeps model.TaskWithDependencies) {
 templ MetadataSection(taskID int64, metadata model.TaskMetadata) {
 	@components.MetadataSection(taskID, metadata)
 }
+
+// StatusUpdateResponse returns the updated detail pane plus OOB updates for affected kanban columns.
+templ StatusUpdateResponse(taskWithDeps model.TaskWithDependencies, oldStatus string, tasksByStatus map[string][]model.Task) {
+	<!-- Main response: updated detail pane -->
+	@components.TaskDetailPane(taskWithDeps)
+	if oldStatus != taskWithDeps.Status {
+		<!-- Out-of-band: update old status column task list -->
+		<div
+			id={ "task-list-" + oldStatus }
+			class="sortable-column flex flex-col gap-2 min-h-[120px] p-2 rounded-lg bg-gray-100/50 border border-transparent transition-all duration-200"
+			data-status={ oldStatus }
+			hx-swap-oob="true"
+		>
+			for _, task := range tasksByStatus[oldStatus] {
+				@components.TaskCard(task)
+			}
+		</div>
+		<!-- Out-of-band: update old status count -->
+		<span
+			id={ "count-" + oldStatus }
+			class="text-xs text-gray-400 bg-gray-100 rounded-full px-2 py-0.5"
+			hx-swap-oob="true"
+		>
+			{ intToStr(len(tasksByStatus[oldStatus])) }
+		</span>
+	}
+	<!-- Out-of-band: update new status column task list -->
+	<div
+		id={ "task-list-" + taskWithDeps.Status }
+		class="sortable-column flex flex-col gap-2 min-h-[120px] p-2 rounded-lg bg-gray-100/50 border border-transparent transition-all duration-200"
+		data-status={ taskWithDeps.Status }
+		hx-swap-oob="true"
+	>
+		for _, task := range tasksByStatus[taskWithDeps.Status] {
+			@components.TaskCard(task)
+		}
+	</div>
+	<!-- Out-of-band: update new status count -->
+	<span
+		id={ "count-" + taskWithDeps.Status }
+		class="text-xs text-gray-400 bg-gray-100 rounded-full px-2 py-0.5"
+		hx-swap-oob="true"
+	>
+		{ intToStr(len(tasksByStatus[taskWithDeps.Status])) }
+	</span>
+}

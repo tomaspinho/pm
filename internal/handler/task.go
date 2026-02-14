@@ -3,6 +3,7 @@ package handler
 import (
 	"strconv"
 
+	"cracked-pm/internal/store"
 	"cracked-pm/views"
 	"cracked-pm/views/components"
 
@@ -315,16 +316,29 @@ func (h *Handler) HandleUpdateStatus(c fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "invalid status")
 	}
 
-	err = h.store.UpdateTaskStatus(c.Context(), taskID, newStatus)
+	// Update status and get the old status
+	oldStatus, err := h.store.UpdateTaskStatus(c.Context(), taskID, newStatus)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to update status")
 	}
 
-	// Return the updated task detail pane
+	// Get the updated task with dependencies
 	taskWithDeps, err := h.store.GetTaskWithDependencies(c.Context(), taskID)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to reload task")
 	}
 
-	return render(c, views.TaskDetailPane(*taskWithDeps))
+	// Get all tasks for the project to update the kanban board
+	// Assuming project ID 1 for now (same as other handlers)
+	projectID := int64(1)
+	tasks, err := h.store.ListTasksByProject(c.Context(), projectID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to load tasks")
+	}
+
+	// Group tasks by status for the board update
+	tasksByStatus := store.GroupTasksByStatus(tasks)
+
+	// Return the detail pane with OOB updates for both old and new columns
+	return render(c, views.StatusUpdateResponse(*taskWithDeps, oldStatus, tasksByStatus))
 }
