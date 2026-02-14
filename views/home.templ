@@ -147,6 +147,13 @@ templ TaskFieldUpdateResponse(taskWithDeps model.TaskWithDependencies) {
 	@components.TitleDisplay(taskWithDeps)
 	@components.DescriptionDisplay(taskWithDeps)
 	@components.AuthorDisplay(taskWithDeps)
+	<!-- Update the task card on the kanban board -->
+	<div
+		id={ "task-" + fmt.Sprintf("%d", taskWithDeps.ID) }
+		hx-swap-oob="true"
+	>
+		@components.TaskCard(taskWithDeps.Task)
+	</div>
 }
 
 // StatusUpdateResponse returns OOB updates for status badge and kanban columns (no full pane reload).
