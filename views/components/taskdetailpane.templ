@@ -4,7 +4,6 @@ import (
 	"cracked-pm/internal/model"
 	"fmt"
 )
-
 // TaskDetailPane renders the slide-out detail pane for a task.
 templ TaskDetailPane(taskWithDeps model.TaskWithDependencies) {
 	<div id="detail-pane" class="detail-pane-backdrop fixed inset-0 bg-gray-900/50 backdrop-blur-sm z-50 flex justify-end">
@@ -267,7 +266,7 @@ templ TaskDetailPane(taskWithDeps model.TaskWithDependencies) {
 
 // DependencySection renders the dependencies section (for htmx swaps).
 templ DependencySection(taskWithDeps model.TaskWithDependencies) {
-	<div class="space-y-4 border-t border-gray-200 pt-6">
+	<div id={ "dependency-section-" + fmt.Sprintf("%d", taskWithDeps.ID) } class="space-y-4 border-t border-gray-200 pt-6">
 		<div class="flex items-center justify-between">
 			<label class="block text-xs font-medium text-gray-500 uppercase tracking-wide">Dependencies</label>
 		</div>
@@ -372,7 +371,7 @@ templ DependencySection(taskWithDeps model.TaskWithDependencies) {
 
 // MetadataSection renders the metadata key-value pairs (for htmx swaps).
 templ MetadataSection(taskID int64, metadata model.TaskMetadata) {
-	<div class="space-y-4 border-t border-gray-200 pt-6">
+	<div id={ "metadata-section-" + fmt.Sprintf("%d", taskID) } class="space-y-4 border-t border-gray-200 pt-6">
 		<div class="flex items-center justify-between">
 			<label class="block text-xs font-medium text-gray-500 uppercase tracking-wide">Metadata</label>
 		</div>
