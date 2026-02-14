@@ -60,7 +60,11 @@ func main() {
 
 	// Routes.
 	app.Get("/", h.HandleHome)
+	app.Get("/tasks/new-form", h.HandleNewTaskForm)
+	app.Get("/tasks/cancel-form", h.HandleCancelForm)
+	app.Post("/tasks", h.HandleCreateTask)
 	app.Patch("/tasks/:id/move", h.HandleMoveTask)
+	app.Delete("/tasks/:id", h.HandleDeleteTask)
 
 	// Graceful shutdown.
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)

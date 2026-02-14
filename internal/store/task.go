@@ -89,3 +89,73 @@ func (s *Store) MoveTask(ctx context.Context, taskID int64, newStatus string, ne
 	}
 	return nil
 }
+// CreateTask inserts a new task at the end of a column.
+func (s *Store) CreateTask(ctx context.Context, projectID int64, title, description, status string) (model.Task, error) {
+	var task model.Task
+
+	// Get max position in the column
+	var maxPos int
+	err := s.db.GetContext(ctx, &maxPos,
+		"SELECT COALESCE(MAX(position), -1) FROM tasks WHERE project_id = $1 AND status = $2",
+		projectID, status)
+	if err != nil {
+		return task, fmt.Errorf("getting max position: %w", err)
+	}
+
+	// Insert at max + 1
+	err = s.db.GetContext(ctx, &task,
+		"INSERT INTO tasks (project_id, title, description, status, position) VALUES ($1, $2, $3, $4, $5) RETURNING *",
+		projectID, title, description, status, maxPos+1)
+	if err != nil {
+		return task, fmt.Errorf("creating task: %w", err)
+	}
+
+	return task, nil
+}
+
+// DeleteTask removes a task and closes the gap in positions.
+func (s *Store) DeleteTask(ctx context.Context, taskID int64) error {
+	tx, err := s.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("beginning transaction: %w", err)
+	}
+	defer tx.Rollback() //nolint:errcheck
+
+	// Get task info before deleting
+	var task model.Task
+	err = tx.GetContext(ctx, &task, "SELECT * FROM tasks WHERE id = $1", taskID)
+	if err != nil {
+		return fmt.Errorf("getting task %d: %w", taskID, err)
+	}
+
+	// Delete the task
+	_, err = tx.ExecContext(ctx, "DELETE FROM tasks WHERE id = $1", taskID)
+	if err != nil {
+		return fmt.Errorf("deleting task %d: %w", taskID, err)
+	}
+
+	// Close gap in positions
+	_, err = tx.ExecContext(ctx,
+		"UPDATE tasks SET position = position - 1, updated_at = now() WHERE project_id = $1 AND status = $2 AND position > $3",
+		task.ProjectID, task.Status, task.Position)
+	if err != nil {
+		return fmt.Errorf("closing gap after delete: %w", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("committing transaction: %w", err)
+	}
+	return nil
+}
+
+// CountTasksByStatus returns the number of tasks in a given status for a project.
+func (s *Store) CountTasksByStatus(ctx context.Context, projectID int64, status string) (int, error) {
+	var count int
+	err := s.db.GetContext(ctx, &count,
+		"SELECT COUNT(*) FROM tasks WHERE project_id = $1 AND status = $2",
+		projectID, status)
+	if err != nil {
+		return 0, fmt.Errorf("counting tasks: %w", err)
+	}
+	return count, nil
+}

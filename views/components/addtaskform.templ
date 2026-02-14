@@ -1,0 +1,53 @@
+package components
+
+import "fmt"
+
+templ AddTaskForm(status string, projectID int64) {
+	<form
+		class="bg-white rounded-lg border border-gray-200 p-3 shadow-sm"
+		hx-post="/tasks"
+		hx-target={ "#task-list-" + status }
+		hx-swap="beforeend"
+		hx-disabled-elt="find button[type='submit']"
+	>
+		<input type="hidden" name="project_id" value={ intToStr(projectID) }/>
+		<input type="hidden" name="status" value={ status }/>
+		<div class="space-y-2">
+			<input
+				type="text"
+				name="title"
+				placeholder="Task title"
+				required
+				autofocus
+				class="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+			/>
+			<textarea
+				name="description"
+				placeholder="Description (optional)"
+				rows="2"
+				class="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+			></textarea>
+			<div class="flex gap-2">
+				<button
+					type="submit"
+					class="px-3 py-1.5 text-sm font-medium text-white bg-blue-600 rounded hover:bg-blue-700 transition-colors"
+				>
+					Add Task
+				</button>
+				<button
+					type="button"
+					class="px-3 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 rounded hover:bg-gray-200 transition-colors"
+					hx-get={ "/tasks/cancel-form?status=" + status }
+					hx-target={ "#add-form-" + status }
+					hx-swap="innerHTML"
+				>
+					Cancel
+				</button>
+			</div>
+		</div>
+	</form>
+}
+
+func intToStr(n int64) string {
+	return fmt.Sprintf("%d", n)
+}

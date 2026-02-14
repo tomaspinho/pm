@@ -18,7 +18,7 @@ templ BoardPage(project model.Project, tasksByStatus map[string][]model.Task) {
 			</div>
 			<div id="kanban-board" class="grid grid-cols-3 gap-6">
 				for _, status := range model.AllStatuses() {
-					@Column(status, tasksByStatus[status])
+					@Column(status, project.ID, tasksByStatus[status])
 				}
 			</div>
 		</div>
@@ -26,23 +26,30 @@ templ BoardPage(project model.Project, tasksByStatus map[string][]model.Task) {
 	}
 }
 
-templ Column(status string, tasks []model.Task) {
+templ Column(status string, projectID int64, tasks []model.Task) {
 	<div class="flex flex-col">
 		<div class="flex items-center gap-2 mb-3">
 			<h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">
 				{ model.StatusLabel(status) }
 			</h2>
-			<span class="text-xs text-gray-400 bg-gray-100 rounded-full px-2 py-0.5">
+			<span
+				id={ "count-" + status }
+				class="text-xs text-gray-400 bg-gray-100 rounded-full px-2 py-0.5"
+			>
 				{ intToStr(len(tasks)) }
 			</span>
 		</div>
 		<div
+			id={ "task-list-" + status }
 			class="sortable-column flex flex-col gap-2 min-h-[120px] p-2 rounded-lg bg-gray-100/50 border border-transparent transition-all duration-200"
 			data-status={ status }
 		>
 			for _, task := range tasks {
 				@components.TaskCard(task)
 			}
+		</div>
+		<div id={ "add-form-" + status } class="mt-2">
+			@components.AddTaskButton(status)
 		</div>
 	</div>
 }
@@ -98,4 +105,24 @@ templ kanbanScript() {
 
 func intToStr(n int) string {
 	return fmt.Sprintf("%d", n)
+}
+
+// NewTaskResponse returns the new task card plus out-of-band updates.
+templ NewTaskResponse(task model.Task, status string, count int) {
+	@components.TaskCard(task)
+	<!-- Out-of-band: update count -->
+	<span id={ "count-" + status } hx-swap-oob="true" class="text-xs text-gray-400 bg-gray-100 rounded-full px-2 py-0.5">
+		{ intToStr(count) }
+	</span>
+	<!-- Out-of-band: reset form to button -->
+	<div id={ "add-form-" + status } hx-swap-oob="true" class="mt-2">
+		@components.AddTaskButton(status)
+	</div>
+}
+
+// DeleteTaskResponse returns out-of-band count update after deletion.
+templ DeleteTaskResponse(status string, count int) {
+	<span id={ "count-" + status } hx-swap-oob="true" class="text-xs text-gray-400 bg-gray-100 rounded-full px-2 py-0.5">
+		{ intToStr(count) }
+	</span>
 }

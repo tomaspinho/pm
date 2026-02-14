@@ -22,3 +22,39 @@
     @apply bg-indigo-50/50 ring-2 ring-inset ring-indigo-200 rounded-lg;
     transition: all 0.2s ease;
 }
+
+/* Delete animation - fade out */
+.htmx-swapping {
+    opacity: 0;
+    transform: scale(0.95);
+    transition: opacity 1s ease-out, transform 1s ease-out;
+}
+
+/* Modal styles (additional specificity if needed) */
+.modal-backdrop {
+    animation: fadeIn 0.2s ease-out;
+}
+
+.modal-card {
+    animation: slideIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
