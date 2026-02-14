@@ -2,7 +2,9 @@ package store
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"strings"
 
 	"cracked-pm/internal/model"
 )
@@ -201,8 +203,52 @@ func (s *Store) UpdateTaskMetadata(ctx context.Context, taskID int64, metadata m
 	return nil
 }
 
+// parseMetadataValue converts user input to valid JSON for PostgreSQL jsonb.
+// Objects {} and arrays [] are preserved as-is.
+// Everything else (strings, numbers, booleans, null) is converted to a JSON string.
+func parseMetadataValue(value string) (string, error) {
+	// Trim whitespace
+	trimmed := strings.TrimSpace(value)
+
+	// Empty string becomes empty JSON string
+	if trimmed == "" {
+		return `""`, nil
+	}
+
+	// Try to parse as JSON to detect valid JSON
+	var jsonTest interface{}
+	if err := json.Unmarshal([]byte(trimmed), &jsonTest); err == nil {
+		// Valid JSON - check if it's an object or array
+		if (strings.HasPrefix(trimmed, "{") && strings.HasSuffix(trimmed, "}")) ||
+			(strings.HasPrefix(trimmed, "[") && strings.HasSuffix(trimmed, "]")) {
+			// Object or array - return as-is
+			return trimmed, nil
+		}
+	}
+
+	// Not an object/array (or invalid JSON) - treat as plain string
+	// Use json.Marshal to properly escape the string
+	marshaled, err := json.Marshal(trimmed)
+	if err != nil {
+		return "", fmt.Errorf("marshaling string value: %w", err)
+	}
+	return string(marshaled), nil
+}
+
 // SetMetadataKey sets a single key in the task's metadata.
 func (s *Store) SetMetadataKey(ctx context.Context, taskID int64, key string, value interface{}) error {
+	// Convert value to string if it isn't already
+	valueStr, ok := value.(string)
+	if !ok {
+		valueStr = fmt.Sprintf("%v", value)
+	}
+
+	// Parse the value to ensure it's valid JSON
+	jsonValue, err := parseMetadataValue(valueStr)
+	if err != nil {
+		return fmt.Errorf("parsing metadata value: %w", err)
+	}
+
 	query := `
 		UPDATE tasks 
 		SET metadata = jsonb_set(metadata, $1, $2::jsonb, true),
@@ -211,7 +257,7 @@ func (s *Store) SetMetadataKey(ctx context.Context, taskID int64, key string, va
 	`
 	// PostgreSQL jsonb_set requires path as text array like '{key}'
 	path := fmt.Sprintf("{%s}", key)
-	_, err := s.db.ExecContext(ctx, query, path, value, taskID)
+	_, err = s.db.ExecContext(ctx, query, path, jsonValue, taskID)
 	if err != nil {
 		return fmt.Errorf("setting metadata key: %w", err)
 	}

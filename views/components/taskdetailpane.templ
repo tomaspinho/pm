@@ -469,12 +469,30 @@ script cancelEditField(field string) {
 
 script toggleAddDependencyForm(taskID string) {
 	var form = document.getElementById('add-dependency-form-' + taskID);
-	form.classList.toggle('hidden');
+	if (form.classList.contains('hidden')) {
+		form.classList.remove('hidden');
+	} else {
+		form.classList.add('hidden');
+		// Clear form input when hiding
+		var input = form.querySelector('input[type="number"]');
+		if (input) {
+			input.value = '';
+		}
+	}
 }
 
 script toggleAddMetadataForm(taskID string) {
 	var form = document.getElementById('add-metadata-form-' + taskID);
-	form.classList.toggle('hidden');
+	if (form.classList.contains('hidden')) {
+		form.classList.remove('hidden');
+	} else {
+		form.classList.add('hidden');
+		// Clear form inputs when hiding
+		var inputs = form.querySelectorAll('input[type="text"]');
+		inputs.forEach(function(input) {
+			input.value = '';
+		});
+	}
 }
 
 script toggleStatusDropdown(taskID string) {
