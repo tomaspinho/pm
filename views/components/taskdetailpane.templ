@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"sort"
 	"strings"
 )
 
@@ -38,6 +39,16 @@ func valueToString(value interface{}) string {
 // Helper function to URL-encode a key for use in URLs
 func urlEncodeKey(key string) string {
 	return url.QueryEscape(key)
+}
+
+// Helper function to get sorted metadata keys
+func getSortedMetadataKeys(metadata model.TaskMetadata) []string {
+	keys := make([]string, 0, len(metadata))
+	for key := range metadata {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	return keys
 }
 // TaskDetailPane renders the slide-out detail pane for a task.
 templ TaskDetailPane(taskWithDeps model.TaskWithDependencies) {
@@ -412,8 +423,8 @@ templ MetadataSection(taskID int64, metadata model.TaskMetadata) {
 		</div>
 		if len(metadata) > 0 {
 			<div class="space-y-2">
-				for key, value := range metadata {
-					@MetadataItem(taskID, key, value)
+				for _, key := range getSortedMetadataKeys(metadata) {
+					@MetadataItem(taskID, key, metadata[key])
 				}
 			</div>
 		} else {
