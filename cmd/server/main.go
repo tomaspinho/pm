@@ -32,7 +32,11 @@ func main() {
 	if err != nil {
 		log.Fatalf("database: %v", err)
 	}
-	defer db.Close()
+	defer func() {
+		if err := db.Close(); err != nil {
+			log.Printf("error closing database: %v", err)
+		}
+	}()
 
 	// Run embedded migrations.
 	goose.SetBaseFS(migrations.FS)
@@ -65,6 +69,12 @@ func main() {
 	app.Post("/tasks", h.HandleCreateTask)
 	app.Patch("/tasks/:id/move", h.HandleMoveTask)
 	app.Delete("/tasks/:id", h.HandleDeleteTask)
+	app.Get("/tasks/:id/detail", h.HandleTaskDetail)
+	app.Patch("/tasks/:id", h.HandleUpdateTask)
+	app.Post("/tasks/:id/dependencies", h.HandleAddDependency)
+	app.Delete("/tasks/:id/dependencies/:depID", h.HandleRemoveDependency)
+	app.Post("/tasks/:id/metadata", h.HandleAddMetadata)
+	app.Delete("/tasks/:id/metadata/:key", h.HandleDeleteMetadata)
 
 	// Graceful shutdown.
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)

@@ -4,14 +4,22 @@ import "time"
 
 // Task represents a kanban card belonging to a project.
 type Task struct {
-	ID          int64     `db:"id"          json:"id"`
-	ProjectID   int64     `db:"project_id"  json:"project_id"`
-	Title       string    `db:"title"       json:"title"`
-	Description string    `db:"description" json:"description"`
-	Status      string    `db:"status"      json:"status"`
-	Position    int       `db:"position"    json:"position"`
-	CreatedAt   time.Time `db:"created_at"  json:"created_at"`
-	UpdatedAt   time.Time `db:"updated_at"  json:"updated_at"`
+	ID          int64        `db:"id"          json:"id"`
+	ProjectID   int64        `db:"project_id"  json:"project_id"`
+	Title       string       `db:"title"       json:"title"`
+	Description string       `db:"description" json:"description"`
+	Author      string       `db:"author"      json:"author"`
+	Status      string       `db:"status"      json:"status"`
+	Position    int          `db:"position"    json:"position"`
+	Metadata    TaskMetadata `db:"metadata"    json:"metadata"`
+	CreatedAt   time.Time    `db:"created_at"  json:"created_at"`
+	UpdatedAt   time.Time    `db:"updated_at"  json:"updated_at"`
+	DeletedAt   *time.Time   `db:"deleted_at"  json:"deleted_at,omitempty"`
+}
+
+// IsDeleted checks if the task is soft-deleted.
+func (t *Task) IsDeleted() bool {
+	return t.DeletedAt != nil
 }
 
 // Kanban column statuses in display order.

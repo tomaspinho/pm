@@ -135,3 +135,159 @@ func (h *Handler) HandleDeleteTask(c fiber.Ctx) error {
 	// Return OOB count update
 	return render(c, views.DeleteTaskResponse(taskStatus, count))
 }
+
+// HandleTaskDetail returns the detail pane for a task.
+// GET /tasks/:id/detail
+func (h *Handler) HandleTaskDetail(c fiber.Ctx) error {
+	taskID, err := strconv.ParseInt(c.Params("id"), 10, 64)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "invalid task id")
+	}
+
+	taskWithDeps, err := h.store.GetTaskWithDependencies(c.Context(), taskID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusNotFound, "task not found")
+	}
+
+	return render(c, views.TaskDetailPane(*taskWithDeps))
+}
+
+// HandleUpdateTask updates a task's basic fields.
+// PATCH /tasks/:id
+func (h *Handler) HandleUpdateTask(c fiber.Ctx) error {
+	taskID, err := strconv.ParseInt(c.Params("id"), 10, 64)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "invalid task id")
+	}
+
+	title := c.FormValue("title")
+	description := c.FormValue("description")
+	author := c.FormValue("author")
+
+	if title == "" {
+		return fiber.NewError(fiber.StatusBadRequest, "title is required")
+	}
+
+	err = h.store.UpdateTask(c.Context(), taskID, title, description, author)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to update task")
+	}
+
+	// Return the updated task detail pane
+	taskWithDeps, err := h.store.GetTaskWithDependencies(c.Context(), taskID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to reload task")
+	}
+
+	return render(c, views.TaskDetailPane(*taskWithDeps))
+}
+
+// HandleAddDependency adds a dependency to a task.
+// POST /tasks/:id/dependencies
+func (h *Handler) HandleAddDependency(c fiber.Ctx) error {
+	taskID, err := strconv.ParseInt(c.Params("id"), 10, 64)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "invalid task id")
+	}
+
+	dependsOnID, err := strconv.ParseInt(c.FormValue("depends_on_id"), 10, 64)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "invalid depends_on_id")
+	}
+
+	err = h.store.AddDependency(c.Context(), taskID, dependsOnID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to add dependency")
+	}
+
+	// Return updated dependency section
+	taskWithDeps, err := h.store.GetTaskWithDependencies(c.Context(), taskID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to reload task")
+	}
+
+	return render(c, views.DependencySection(*taskWithDeps))
+}
+
+// HandleRemoveDependency removes a dependency from a task.
+// DELETE /tasks/:id/dependencies/:depID
+func (h *Handler) HandleRemoveDependency(c fiber.Ctx) error {
+	taskID, err := strconv.ParseInt(c.Params("id"), 10, 64)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "invalid task id")
+	}
+
+	dependsOnID, err := strconv.ParseInt(c.Params("depID"), 10, 64)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "invalid dependency id")
+	}
+
+	err = h.store.RemoveDependency(c.Context(), taskID, dependsOnID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to remove dependency")
+	}
+
+	// Return updated dependency section
+	taskWithDeps, err := h.store.GetTaskWithDependencies(c.Context(), taskID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to reload task")
+	}
+
+	return render(c, views.DependencySection(*taskWithDeps))
+}
+
+// HandleAddMetadata adds a metadata key-value pair.
+// POST /tasks/:id/metadata
+func (h *Handler) HandleAddMetadata(c fiber.Ctx) error {
+	taskID, err := strconv.ParseInt(c.Params("id"), 10, 64)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "invalid task id")
+	}
+
+	key := c.FormValue("key")
+	value := c.FormValue("value")
+
+	if key == "" {
+		return fiber.NewError(fiber.StatusBadRequest, "key is required")
+	}
+
+	err = h.store.SetMetadataKey(c.Context(), taskID, key, value)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to add metadata")
+	}
+
+	// Get updated task
+	task, err := h.store.GetTask(c.Context(), taskID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to reload task")
+	}
+
+	return render(c, views.MetadataSection(taskID, task.Metadata))
+}
+
+// HandleDeleteMetadata removes a metadata key.
+// DELETE /tasks/:id/metadata/:key
+func (h *Handler) HandleDeleteMetadata(c fiber.Ctx) error {
+	taskID, err := strconv.ParseInt(c.Params("id"), 10, 64)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "invalid task id")
+	}
+
+	key := c.Params("key")
+	if key == "" {
+		return fiber.NewError(fiber.StatusBadRequest, "key is required")
+	}
+
+	err = h.store.DeleteMetadataKey(c.Context(), taskID, key)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to delete metadata")
+	}
+
+	// Get updated task
+	task, err := h.store.GetTask(c.Context(), taskID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to reload task")
+	}
+
+	return render(c, views.MetadataSection(taskID, task.Metadata))
+}

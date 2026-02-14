@@ -58,3 +58,39 @@
         transform: translateY(0);
     }
 }
+
+/* Detail pane slide-out */
+.detail-pane-backdrop {
+    animation: fadeIn 0.2s ease-out;
+}
+
+.detail-pane-panel {
+    animation: slideInFromRight 0.3s ease-out;
+}
+
+@keyframes slideInFromRight {
+    from {
+        transform: translateX(100%);
+    }
+    to {
+        transform: translateX(0);
+    }
+}
+
+/* Editable field styles */
+.editable-field:hover {
+    @apply bg-gray-50/50 rounded-lg transition-colors;
+}
+
+.editable-form input,
+.editable-form textarea {
+    @apply text-sm;
+}
+
+/* Line clamp utility for task descriptions in cards */
+.line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}

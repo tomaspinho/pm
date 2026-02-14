@@ -22,7 +22,12 @@ templ TaskCard(task model.Task) {
 					<circle cx="10" cy="13" r="1.5"></circle>
 				</svg>
 			</span>
-			<div class="flex-1 min-w-0">
+			<div
+				class="flex-1 min-w-0 cursor-pointer"
+				hx-get={ "/tasks/" + fmt.Sprintf("%d", task.ID) + "/detail" }
+				hx-target="body"
+				hx-swap="beforeend"
+			>
 				<p class="text-sm font-medium text-gray-900 truncate">{ task.Title }</p>
 				if task.Description != "" {
 					<p class="text-xs text-gray-500 mt-1 line-clamp-2">{ task.Description }</p>

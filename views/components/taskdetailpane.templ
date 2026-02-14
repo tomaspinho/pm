@@ -1,0 +1,465 @@
+package components
+
+import (
+	"cracked-pm/internal/model"
+	"fmt"
+)
+
+// TaskDetailPane renders the slide-out detail pane for a task.
+templ TaskDetailPane(taskWithDeps model.TaskWithDependencies) {
+	<div id="detail-pane" class="detail-pane-backdrop fixed inset-0 bg-gray-900/50 backdrop-blur-sm z-50 flex justify-end">
+		<div class="detail-pane-panel bg-white w-full max-w-2xl h-full shadow-2xl overflow-y-auto">
+			<!-- Header -->
+			<div class="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10">
+				<h2 class="text-lg font-semibold text-gray-900">Task Details</h2>
+				<button
+					type="button"
+					class="close-pane-btn text-gray-400 hover:text-gray-600 transition-colors"
+					onclick="document.getElementById('detail-pane').remove()"
+				>
+					<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+					</svg>
+				</button>
+			</div>
+			<!-- Content -->
+			<div class="p-6 space-y-6">
+				<!-- Circular Dependency Warning -->
+				if taskWithDeps.HasCycle {
+					<div class="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start gap-3">
+						<svg class="w-5 h-5 text-amber-600 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+							<path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+						</svg>
+						<div class="flex-1">
+							<p class="text-sm font-medium text-amber-900">Circular Dependency Detected</p>
+							<p class="text-xs text-amber-700 mt-1">This task is part of a circular dependency chain.</p>
+						</div>
+					</div>
+				}
+				<!-- Title -->
+				<div class="space-y-2">
+					<label class="block text-xs font-medium text-gray-500 uppercase tracking-wide">Title</label>
+					<div
+						class="editable-field group"
+						id={ "title-display-" + fmt.Sprintf("%d", taskWithDeps.ID) }
+					>
+						<div class="flex items-center gap-2">
+							<p class="text-lg font-semibold text-gray-900 flex-1">{ taskWithDeps.Title }</p>
+							<button
+								type="button"
+								class="edit-btn opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-gray-600"
+								onclick={ showEditField(fmt.Sprintf("title-%d", taskWithDeps.ID)) }
+							>
+								<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+								</svg>
+							</button>
+						</div>
+					</div>
+					<div
+						class="editable-form hidden"
+						id={ "title-form-" + fmt.Sprintf("%d", taskWithDeps.ID) }
+					>
+						<form
+							hx-patch={ "/tasks/" + fmt.Sprintf("%d", taskWithDeps.ID) }
+							hx-target="#detail-pane"
+							hx-swap="outerHTML"
+						>
+							<input
+								type="text"
+								name="title"
+								value={ taskWithDeps.Title }
+								class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+								required
+							/>
+							<input type="hidden" name="description" value={ taskWithDeps.Description }/>
+							<input type="hidden" name="author" value={ taskWithDeps.Author }/>
+							<div class="flex gap-2 mt-2">
+								<button type="submit" class="px-3 py-1.5 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700">
+									Save
+								</button>
+								<button
+									type="button"
+									class="px-3 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+									onclick={ cancelEditField(fmt.Sprintf("title-%d", taskWithDeps.ID)) }
+								>
+									Cancel
+								</button>
+							</div>
+						</form>
+					</div>
+				</div>
+				<!-- Description -->
+				<div class="space-y-2">
+					<label class="block text-xs font-medium text-gray-500 uppercase tracking-wide">Description</label>
+					<div
+						class="editable-field group"
+						id={ "description-display-" + fmt.Sprintf("%d", taskWithDeps.ID) }
+					>
+						<div class="flex items-start gap-2">
+							<p class="text-sm text-gray-700 flex-1 whitespace-pre-wrap">
+								if taskWithDeps.Description != "" {
+									{ taskWithDeps.Description }
+								} else {
+									<span class="text-gray-400 italic">No description</span>
+								}
+							</p>
+							<button
+								type="button"
+								class="edit-btn opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-gray-600 shrink-0"
+								onclick={ showEditField(fmt.Sprintf("description-%d", taskWithDeps.ID)) }
+							>
+								<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+								</svg>
+							</button>
+						</div>
+					</div>
+					<div
+						class="editable-form hidden"
+						id={ "description-form-" + fmt.Sprintf("%d", taskWithDeps.ID) }
+					>
+						<form
+							hx-patch={ "/tasks/" + fmt.Sprintf("%d", taskWithDeps.ID) }
+							hx-target="#detail-pane"
+							hx-swap="outerHTML"
+						>
+							<textarea
+								name="description"
+								rows="4"
+								class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+							>{ taskWithDeps.Description }</textarea>
+							<input type="hidden" name="title" value={ taskWithDeps.Title }/>
+							<input type="hidden" name="author" value={ taskWithDeps.Author }/>
+							<div class="flex gap-2 mt-2">
+								<button type="submit" class="px-3 py-1.5 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700">
+									Save
+								</button>
+								<button
+									type="button"
+									class="px-3 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+									onclick={ cancelEditField(fmt.Sprintf("description-%d", taskWithDeps.ID)) }
+								>
+									Cancel
+								</button>
+							</div>
+						</form>
+					</div>
+				</div>
+				<!-- Author -->
+				<div class="space-y-2">
+					<label class="block text-xs font-medium text-gray-500 uppercase tracking-wide">Author</label>
+					<div
+						class="editable-field group"
+						id={ "author-display-" + fmt.Sprintf("%d", taskWithDeps.ID) }
+					>
+						<div class="flex items-center gap-2">
+							<p class="text-sm text-gray-700 flex-1">
+								if taskWithDeps.Author != "" {
+									{ taskWithDeps.Author }
+								} else {
+									<span class="text-gray-400 italic">No author</span>
+								}
+							</p>
+							<button
+								type="button"
+								class="edit-btn opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-gray-600"
+								onclick={ showEditField(fmt.Sprintf("author-%d", taskWithDeps.ID)) }
+							>
+								<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+								</svg>
+							</button>
+						</div>
+					</div>
+					<div
+						class="editable-form hidden"
+						id={ "author-form-" + fmt.Sprintf("%d", taskWithDeps.ID) }
+					>
+						<form
+							hx-patch={ "/tasks/" + fmt.Sprintf("%d", taskWithDeps.ID) }
+							hx-target="#detail-pane"
+							hx-swap="outerHTML"
+						>
+							<input
+								type="text"
+								name="author"
+								value={ taskWithDeps.Author }
+								class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+							/>
+							<input type="hidden" name="title" value={ taskWithDeps.Title }/>
+							<input type="hidden" name="description" value={ taskWithDeps.Description }/>
+							<div class="flex gap-2 mt-2">
+								<button type="submit" class="px-3 py-1.5 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700">
+									Save
+								</button>
+								<button
+									type="button"
+									class="px-3 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+									onclick={ cancelEditField(fmt.Sprintf("author-%d", taskWithDeps.ID)) }
+								>
+									Cancel
+								</button>
+							</div>
+						</form>
+					</div>
+				</div>
+				<!-- Status -->
+				<div class="space-y-2">
+					<label class="block text-xs font-medium text-gray-500 uppercase tracking-wide">Status</label>
+					<span class="inline-flex px-3 py-1 text-sm font-medium rounded-full bg-indigo-100 text-indigo-800">
+						{ model.StatusLabel(taskWithDeps.Status) }
+					</span>
+				</div>
+				<!-- Dependencies Section -->
+				<div id={ "dependency-section-" + fmt.Sprintf("%d", taskWithDeps.ID) }>
+					@DependencySection(taskWithDeps)
+				</div>
+				<!-- Metadata Section -->
+				<div id={ "metadata-section-" + fmt.Sprintf("%d", taskWithDeps.ID) }>
+					@MetadataSection(taskWithDeps.ID, taskWithDeps.Metadata)
+				</div>
+			</div>
+		</div>
+	</div>
+	@detailPaneScript()
+}
+
+// DependencySection renders the dependencies section (for htmx swaps).
+templ DependencySection(taskWithDeps model.TaskWithDependencies) {
+	<div class="space-y-4 border-t border-gray-200 pt-6">
+		<div class="flex items-center justify-between">
+			<label class="block text-xs font-medium text-gray-500 uppercase tracking-wide">Dependencies</label>
+		</div>
+		<!-- Blocked By -->
+		<div class="space-y-2">
+			<h4 class="text-sm font-medium text-gray-700">Blocked By</h4>
+			if len(taskWithDeps.BlockedBy) > 0 {
+				<div class="space-y-1.5">
+					for _, dep := range taskWithDeps.BlockedBy {
+						<div class="flex items-center gap-2 group">
+							<button
+								type="button"
+								class="flex-1 text-left px-3 py-2 bg-gray-50 hover:bg-gray-100 rounded-lg border border-gray-200 transition-colors"
+								hx-get={ "/tasks/" + fmt.Sprintf("%d", dep.ID) + "/detail" }
+								hx-target="#detail-pane"
+								hx-swap="outerHTML"
+							>
+								<span class="text-sm text-gray-900">{ dep.Title }</span>
+								<span class="text-xs text-gray-500 ml-2">({ model.StatusLabel(dep.Status) })</span>
+							</button>
+							<button
+								type="button"
+								class="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-red-500"
+								hx-delete={ "/tasks/" + fmt.Sprintf("%d", taskWithDeps.ID) + "/dependencies/" + fmt.Sprintf("%d", dep.ID) }
+								hx-target={ "#dependency-section-" + fmt.Sprintf("%d", taskWithDeps.ID) }
+								hx-swap="outerHTML"
+							>
+								<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+								</svg>
+							</button>
+						</div>
+					}
+				</div>
+			} else {
+				<p class="text-sm text-gray-400 italic">No blocking dependencies</p>
+			}
+		</div>
+		<!-- Blocking -->
+		<div class="space-y-2">
+			<h4 class="text-sm font-medium text-gray-700">Blocking</h4>
+			if len(taskWithDeps.Blocking) > 0 {
+				<div class="space-y-1.5">
+					for _, dep := range taskWithDeps.Blocking {
+						<button
+							type="button"
+							class="w-full text-left px-3 py-2 bg-gray-50 hover:bg-gray-100 rounded-lg border border-gray-200 transition-colors"
+							hx-get={ "/tasks/" + fmt.Sprintf("%d", dep.ID) + "/detail" }
+							hx-target="#detail-pane"
+							hx-swap="outerHTML"
+						>
+							<span class="text-sm text-gray-900">{ dep.Title }</span>
+							<span class="text-xs text-gray-500 ml-2">({ model.StatusLabel(dep.Status) })</span>
+						</button>
+					}
+				</div>
+			} else {
+				<p class="text-sm text-gray-400 italic">Not blocking any tasks</p>
+			}
+		</div>
+		<!-- Add Dependency Form -->
+		<div class="space-y-2">
+			<button
+				type="button"
+				class="text-sm font-medium text-indigo-600 hover:text-indigo-700"
+				onclick={ toggleAddDependencyForm(fmt.Sprintf("%d", taskWithDeps.ID)) }
+			>
+				+ Add Dependency
+			</button>
+			<div
+				id={ "add-dependency-form-" + fmt.Sprintf("%d", taskWithDeps.ID) }
+				class="hidden"
+			>
+				<form
+					hx-post={ "/tasks/" + fmt.Sprintf("%d", taskWithDeps.ID) + "/dependencies" }
+					hx-target={ "#dependency-section-" + fmt.Sprintf("%d", taskWithDeps.ID) }
+					hx-swap="outerHTML"
+					class="flex gap-2"
+				>
+					<input
+						type="number"
+						name="depends_on_id"
+						placeholder="Task ID"
+						class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+						required
+					/>
+					<button type="submit" class="px-3 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700">
+						Add
+					</button>
+					<button
+						type="button"
+						class="px-3 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+						onclick={ toggleAddDependencyForm(fmt.Sprintf("%d", taskWithDeps.ID)) }
+					>
+						Cancel
+					</button>
+				</form>
+			</div>
+		</div>
+	</div>
+}
+
+// MetadataSection renders the metadata key-value pairs (for htmx swaps).
+templ MetadataSection(taskID int64, metadata model.TaskMetadata) {
+	<div class="space-y-4 border-t border-gray-200 pt-6">
+		<div class="flex items-center justify-between">
+			<label class="block text-xs font-medium text-gray-500 uppercase tracking-wide">Metadata</label>
+		</div>
+		if len(metadata) > 0 {
+			<div class="space-y-2">
+				for key, value := range metadata {
+					<div class="flex items-center gap-2 group">
+						<div class="flex-1 px-3 py-2 bg-gray-50 rounded-lg border border-gray-200">
+							<div class="flex items-center gap-2">
+								<span class="text-xs font-medium text-gray-500">{ key }:</span>
+								<span class="text-sm text-gray-900">{ fmt.Sprintf("%v", value) }</span>
+							</div>
+						</div>
+						<button
+							type="button"
+							class="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-red-500"
+							hx-delete={ "/tasks/" + fmt.Sprintf("%d", taskID) + "/metadata/" + key }
+							hx-target={ "#metadata-section-" + fmt.Sprintf("%d", taskID) }
+							hx-swap="outerHTML"
+						>
+							<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+							</svg>
+						</button>
+					</div>
+				}
+			</div>
+		} else {
+			<p class="text-sm text-gray-400 italic">No metadata</p>
+		}
+		<!-- Add Metadata Form -->
+		<div class="space-y-2">
+			<button
+				type="button"
+				class="text-sm font-medium text-indigo-600 hover:text-indigo-700"
+				onclick={ toggleAddMetadataForm(fmt.Sprintf("%d", taskID)) }
+			>
+				+ Add Metadata
+			</button>
+			<div
+				id={ "add-metadata-form-" + fmt.Sprintf("%d", taskID) }
+				class="hidden"
+			>
+				<form
+					hx-post={ "/tasks/" + fmt.Sprintf("%d", taskID) + "/metadata" }
+					hx-target={ "#metadata-section-" + fmt.Sprintf("%d", taskID) }
+					hx-swap="outerHTML"
+					class="space-y-2"
+				>
+					<input
+						type="text"
+						name="key"
+						placeholder="Key"
+						class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+						required
+					/>
+					<input
+						type="text"
+						name="value"
+						placeholder="Value"
+						class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+						required
+					/>
+					<div class="flex gap-2">
+						<button type="submit" class="px-3 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700">
+							Add
+						</button>
+						<button
+							type="button"
+							class="px-3 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+							onclick={ toggleAddMetadataForm(fmt.Sprintf("%d", taskID)) }
+						>
+							Cancel
+						</button>
+					</div>
+				</form>
+			</div>
+		</div>
+	</div>
+}
+
+// JavaScript helper functions
+script showEditField(field string) {
+  var fieldSplitted = field.split('-');
+	document.getElementById(fieldSplitted[0] + '-display-' + fieldSplitted[1]).classList.add('hidden');
+	document.getElementById(fieldSplitted[0] + '-form-' + fieldSplitted[1]).classList.remove('hidden');
+}
+
+script cancelEditField(field string) {
+  var fieldSplitted = field.split('-')
+	document.getElementById(fieldSplitted[0] + '-display-' + fieldSplitted[1]).classList.remove('hidden');
+	document.getElementById(fieldSplitted[0] + '-form-' + fieldSplitted[1]).classList.add('hidden');
+}
+
+script toggleAddDependencyForm(taskID string) {
+	var form = document.getElementById('add-dependency-form-' + taskID);
+	form.classList.toggle('hidden');
+}
+
+script toggleAddMetadataForm(taskID string) {
+	var form = document.getElementById('add-metadata-form-' + taskID);
+	form.classList.toggle('hidden');
+}
+
+// detailPaneScript handles Escape key and backdrop clicks
+templ detailPaneScript() {
+	<script>
+	(function() {
+		var pane = document.getElementById('detail-pane');
+		if (!pane) return;
+		
+		// Close on Escape key
+		function handleEscape(e) {
+			if (e.key === 'Escape') {
+				pane.remove();
+				document.removeEventListener('keydown', handleEscape);
+			}
+		}
+		document.addEventListener('keydown', handleEscape);
+		
+		// Close on backdrop click
+		pane.addEventListener('click', function(e) {
+			if (e.target === pane) {
+				pane.remove();
+				document.removeEventListener('keydown', handleEscape);
+			}
+		});
+	})();
+	</script>
+}

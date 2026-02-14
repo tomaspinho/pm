@@ -126,3 +126,18 @@ templ DeleteTaskResponse(status string, count int) {
 		{ intToStr(count) }
 	</span>
 }
+
+// TaskDetailPane wraps the component for use in handlers.
+templ TaskDetailPane(taskWithDeps model.TaskWithDependencies) {
+	@components.TaskDetailPane(taskWithDeps)
+}
+
+// DependencySection wraps the component for use in handlers.
+templ DependencySection(taskWithDeps model.TaskWithDependencies) {
+	@components.DependencySection(taskWithDeps)
+}
+
+// MetadataSection wraps the component for use in handlers.
+templ MetadataSection(taskID int64, metadata model.TaskMetadata) {
+	@components.MetadataSection(taskID, metadata)
+}
