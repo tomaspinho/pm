@@ -1,1 +1,24 @@
 @import "tailwindcss";
+
+/* Drag-and-drop effects for SortableJS */
+
+.task-ghost {
+    @apply opacity-30 bg-indigo-100 border-2 border-dashed border-indigo-400 rounded-lg;
+}
+
+.task-ghost * {
+    @apply invisible;
+}
+
+.task-chosen {
+    @apply shadow-xl ring-2 ring-indigo-500/50 rotate-1 scale-[1.02] z-50;
+}
+
+.task-drag {
+    @apply opacity-95 shadow-2xl;
+}
+
+.drop-target {
+    @apply bg-indigo-50/50 ring-2 ring-inset ring-indigo-200 rounded-lg;
+    transition: all 0.2s ease;
+}

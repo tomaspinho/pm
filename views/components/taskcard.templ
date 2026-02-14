@@ -1,0 +1,32 @@
+package components
+
+import (
+	"cracked-pm/internal/model"
+	"fmt"
+)
+
+templ TaskCard(task model.Task) {
+	<div
+		class="task-card bg-white rounded-lg shadow-sm border border-gray-200 p-3 cursor-grab active:cursor-grabbing hover:shadow-md transition-all duration-150"
+		data-id={ fmt.Sprintf("%d", task.ID) }
+	>
+		<div class="flex items-start gap-2">
+			<span class="drag-handle mt-0.5 text-gray-300 hover:text-gray-500 transition-colors shrink-0">
+				<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 16 16">
+					<circle cx="4" cy="3" r="1.5"></circle>
+					<circle cx="4" cy="8" r="1.5"></circle>
+					<circle cx="4" cy="13" r="1.5"></circle>
+					<circle cx="10" cy="3" r="1.5"></circle>
+					<circle cx="10" cy="8" r="1.5"></circle>
+					<circle cx="10" cy="13" r="1.5"></circle>
+				</svg>
+			</span>
+			<div class="flex-1 min-w-0">
+				<p class="text-sm font-medium text-gray-900 truncate">{ task.Title }</p>
+				if task.Description != "" {
+					<p class="text-xs text-gray-500 mt-1 line-clamp-2">{ task.Description }</p>
+				}
+			</div>
+		</div>
+	</div>
+}

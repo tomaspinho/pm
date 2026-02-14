@@ -43,6 +43,10 @@ func main() {
 		log.Fatalf("goose up: %v", err)
 	}
 
+	// Create store and handler.
+	s := store.New(db)
+	h := handler.New(s)
+
 	// Create Fiber app.
 	app := fiber.New(fiber.Config{
 		AppName: "cracked-pm",
@@ -55,8 +59,8 @@ func main() {
 	app.Get("/static/*", static.New("./static"))
 
 	// Routes.
-	app.Get("/", handler.HandleHome)
-	app.Get("/api/time", handler.HandleTime)
+	app.Get("/", h.HandleHome)
+	app.Patch("/tasks/:id/move", h.HandleMoveTask)
 
 	// Graceful shutdown.
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)

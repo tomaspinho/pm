@@ -1,33 +1,101 @@
 package views
 
-templ HomePage() {
-	@Layout("Home") {
-		<div class="space-y-8">
+import (
+	"fmt"
+
+	"cracked-pm/internal/model"
+	"cracked-pm/views/components"
+)
+
+templ BoardPage(project model.Project, tasksByStatus map[string][]model.Task) {
+	@Layout(project.Name) {
+		<div class="space-y-6">
 			<div>
-				<h1 class="text-3xl font-bold text-gray-900">Welcome to cracked-pm</h1>
-				<p class="mt-2 text-gray-600">
-					A Go web application built with Fiber, sqlx, htmx, and TailwindCSS.
-				</p>
+				<h1 class="text-2xl font-bold text-gray-900">{ project.Name }</h1>
+				if project.Description != "" {
+					<p class="mt-1 text-gray-500">{ project.Description }</p>
+				}
 			</div>
-			<div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-				<h2 class="text-xl font-semibold mb-4">htmx Example</h2>
-				<p class="text-gray-600 mb-4">Click the button to fetch server time via htmx:</p>
-				<button
-					hx-get="/api/time"
-					hx-target="#time-display"
-					hx-swap="innerHTML"
-					class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors cursor-pointer"
-				>
-					Get Server Time
-				</button>
-				<div id="time-display" class="mt-4 text-gray-700 font-mono"></div>
+			<div id="kanban-board" class="grid grid-cols-3 gap-6">
+				for _, status := range model.AllStatuses() {
+					@Column(status, tasksByStatus[status])
+				}
 			</div>
 		</div>
+		@kanbanScript()
 	}
 }
 
-templ TimeDisplay(timeStr string) {
-	<p class="text-lg">
-		Server time: <span class="font-semibold">{ timeStr }</span>
-	</p>
+templ Column(status string, tasks []model.Task) {
+	<div class="flex flex-col">
+		<div class="flex items-center gap-2 mb-3">
+			<h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">
+				{ model.StatusLabel(status) }
+			</h2>
+			<span class="text-xs text-gray-400 bg-gray-100 rounded-full px-2 py-0.5">
+				{ intToStr(len(tasks)) }
+			</span>
+		</div>
+		<div
+			class="sortable-column flex flex-col gap-2 min-h-[120px] p-2 rounded-lg bg-gray-100/50 border border-transparent transition-all duration-200"
+			data-status={ status }
+		>
+			for _, task := range tasks {
+				@components.TaskCard(task)
+			}
+		</div>
+	</div>
+}
+
+templ kanbanScript() {
+	<script>
+	(function() {
+		function initKanban() {
+			var columns = document.querySelectorAll(".sortable-column");
+			columns.forEach(function(col) {
+				if (col.sortableInstance) return;
+				col.sortableInstance = new Sortable(col, {
+					group: "kanban",
+					animation: 200,
+					easing: "cubic-bezier(0.25, 1, 0.5, 1)",
+					ghostClass: "task-ghost",
+					chosenClass: "task-chosen",
+					dragClass: "task-drag",
+					handle: ".drag-handle",
+					emptyInsertThreshold: 30,
+					forceFallback: false,
+					onStart: function() {
+						document.querySelectorAll(".sortable-column").forEach(function(c) {
+							c.classList.add("drop-target");
+						});
+					},
+					onEnd: function(evt) {
+						document.querySelectorAll(".sortable-column").forEach(function(c) {
+							c.classList.remove("drop-target");
+						});
+
+						var taskId = evt.item.dataset.id;
+						var newStatus = evt.to.dataset.status;
+						var newPosition = evt.newIndex;
+
+						htmx.ajax("PATCH", "/tasks/" + taskId + "/move", {
+							values: {
+								status: newStatus,
+								position: newPosition
+							},
+							swap: "none"
+						});
+					}
+				});
+			});
+		}
+
+		initKanban();
+		document.addEventListener("htmx:afterSwap", initKanban);
+	})();
+	</script>
+}
+
+func intToStr(n int) string {
+	return fmt.Sprintf("%d", n)
 }

@@ -1,27 +1,26 @@
 package handler
 
 import (
-	"time"
-
+	"cracked-pm/internal/store"
 	"cracked-pm/views"
 
-	"github.com/a-h/templ"
 	"github.com/gofiber/fiber/v3"
 )
 
-// HandleHome renders the home page.
-func HandleHome(c fiber.Ctx) error {
-	return render(c, views.HomePage())
-}
+// HandleHome renders the kanban board for the default project (ID=1).
+func (h *Handler) HandleHome(c fiber.Ctx) error {
+	ctx := c.Context()
 
-// HandleTime returns the current server time as an htmx partial.
-func HandleTime(c fiber.Ctx) error {
-	now := time.Now().Format(time.RFC1123)
-	return render(c, views.TimeDisplay(now))
-}
+	project, err := h.store.GetProject(ctx, 1)
+	if err != nil {
+		return fiber.NewError(fiber.StatusNotFound, "project not found")
+	}
 
-// render is a helper that renders a templ component into a Fiber response.
-func render(c fiber.Ctx, component templ.Component) error {
-	c.Set("Content-Type", "text/html; charset=utf-8")
-	return component.Render(c.Context(), c.Response().BodyWriter())
+	tasks, err := h.store.ListTasksByProject(ctx, project.ID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to load tasks")
+	}
+
+	grouped := store.GroupTasksByStatus(tasks)
+	return render(c, views.BoardPage(project, grouped))
 }

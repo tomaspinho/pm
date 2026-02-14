@@ -106,6 +106,10 @@ run = 'goose -dir migrations create {{arg(name="migration_name")}} sql'
 description = "Rollback all migrations then re-apply"
 run = ['goose -dir migrations postgres "$DATABASE_URL" reset', 'goose -dir migrations postgres "$DATABASE_URL" up']
 
+[tasks."db:seed"]
+description = "Load seed data (idempotent)"
+run = 'psql "$DATABASE_URL" -f seeds/seed.sql'
+
 # -----------------------------------------------------------------------------
 # Setup
 # -----------------------------------------------------------------------------
