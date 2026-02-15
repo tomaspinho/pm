@@ -1,5 +1,18 @@
 package views
 
+import (
+	"fmt"
+
+	"cracked-pm/internal/model"
+)
+
+// NavContext holds data for the navigation bar. Nil means not authenticated.
+type NavContext struct {
+	User         *model.User
+	Orgs         []model.Organization
+	CurrentOrgID int64
+}
+
 templ Layout(title string) {
 	<!DOCTYPE html>
 	<html lang="en">
@@ -15,6 +28,64 @@ templ Layout(title string) {
 			<nav class="bg-white shadow-sm border-b border-gray-200">
 				<div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
 					<a href="/" class="text-lg font-semibold text-gray-800">cracked-pm</a>
+				</div>
+			</nav>
+			<main class="max-w-7xl mx-auto px-4 py-8">
+				{ children... }
+			</main>
+			<div id="modal-container"></div>
+			@confirmModalScript()
+		</body>
+	</html>
+}
+
+templ AuthLayout(title string, nav NavContext) {
+	<!DOCTYPE html>
+	<html lang="en">
+		<head>
+			<meta charset="UTF-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+			<title>{ title } - cracked-pm</title>
+			<link rel="stylesheet" href="/static/css/output.css"/>
+			<script src="/static/js/htmx.min.js"></script>
+			<script src="/static/js/Sortable.min.js"></script>
+		</head>
+		<body class="bg-gray-50 text-gray-900 min-h-screen">
+			<nav class="bg-white shadow-sm border-b border-gray-200">
+				<div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+					<a href="/" class="text-lg font-semibold text-gray-800">cracked-pm</a>
+					<div class="flex items-center gap-4">
+						<!-- Org Picker -->
+						if len(nav.Orgs) > 0 {
+							<div class="relative">
+								<select
+									class="text-sm border border-gray-300 rounded-lg px-3 py-1.5 bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 cursor-pointer"
+									onchange="window.location.href='/projects?org_id='+this.value"
+								>
+									<option value="">Select organization</option>
+									for _, org := range nav.Orgs {
+										if org.ID == nav.CurrentOrgID {
+											<option value={ fmt.Sprintf("%d", org.ID) } selected>{ org.Name }</option>
+										} else {
+											<option value={ fmt.Sprintf("%d", org.ID) }>{ org.Name }</option>
+										}
+									}
+								</select>
+							</div>
+						}
+						<!-- User info + Logout -->
+						<div class="flex items-center gap-3">
+							<span class="text-sm text-gray-500">{ nav.User.Email }</span>
+							<form method="POST" action="/logout">
+								<button
+									type="submit"
+									class="text-sm text-gray-500 hover:text-gray-700 transition-colors"
+								>
+									Sign out
+								</button>
+							</form>
+						</div>
+					</div>
 				</div>
 			</nav>
 			<main class="max-w-7xl mx-auto px-4 py-8">

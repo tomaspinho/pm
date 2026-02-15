@@ -9,6 +9,11 @@ import (
 	"strings"
 )
 
+// Helper function to build org-scoped task URL prefix
+func taskURLPrefix(orgID int64, projectID int64) string {
+	return fmt.Sprintf("/orgs/%d/projects/%d/tasks", orgID, projectID)
+}
+
 // Helper function to check if a value is a complex JSON type (object or array)
 func isComplexJSON(value interface{}) bool {
 	switch value.(type) {
@@ -82,7 +87,7 @@ func formatDueDate(task model.Task) string {
 	return formatted
 }
 // TaskDetailPane renders the slide-out detail pane for a task.
-templ TaskDetailPane(taskWithDeps model.TaskWithDependencies) {
+templ TaskDetailPane(taskWithDeps model.TaskWithDependencies, orgID int64) {
 	<div id="detail-pane" class="detail-pane-backdrop fixed inset-0 bg-gray-900/50 backdrop-blur-sm z-50 flex justify-end">
 		<div class="detail-pane-panel bg-white w-full max-w-2xl h-full shadow-2xl overflow-y-auto">
 			<!-- Header -->
@@ -141,7 +146,7 @@ templ TaskDetailPane(taskWithDeps model.TaskWithDependencies) {
 						id={ "title-form-" + fmt.Sprintf("%d", taskWithDeps.ID) }
 					>
 						<form
-							hx-patch={ "/tasks/" + fmt.Sprintf("%d", taskWithDeps.ID) }
+							hx-patch={ taskURLPrefix(orgID, taskWithDeps.ProjectID) + "/" + fmt.Sprintf("%d", taskWithDeps.ID) }
 							hx-target="body"
 							hx-swap="none"
 						>
@@ -202,7 +207,7 @@ templ TaskDetailPane(taskWithDeps model.TaskWithDependencies) {
 						id={ "description-form-" + fmt.Sprintf("%d", taskWithDeps.ID) }
 					>
 						<form
-							hx-patch={ "/tasks/" + fmt.Sprintf("%d", taskWithDeps.ID) }
+							hx-patch={ taskURLPrefix(orgID, taskWithDeps.ProjectID) + "/" + fmt.Sprintf("%d", taskWithDeps.ID) }
 							hx-target="body"
 							hx-swap="none"
 						>
@@ -261,7 +266,7 @@ templ TaskDetailPane(taskWithDeps model.TaskWithDependencies) {
 						id={ "author-form-" + fmt.Sprintf("%d", taskWithDeps.ID) }
 					>
 						<form
-							hx-patch={ "/tasks/" + fmt.Sprintf("%d", taskWithDeps.ID) }
+							hx-patch={ taskURLPrefix(orgID, taskWithDeps.ProjectID) + "/" + fmt.Sprintf("%d", taskWithDeps.ID) }
 							hx-target="body"
 							hx-swap="none"
 						>
@@ -317,7 +322,7 @@ templ TaskDetailPane(taskWithDeps model.TaskWithDependencies) {
 						id={ "duedate-form-" + fmt.Sprintf("%d", taskWithDeps.ID) }
 					>
 						<form
-							hx-patch={ "/tasks/" + fmt.Sprintf("%d", taskWithDeps.ID) }
+							hx-patch={ taskURLPrefix(orgID, taskWithDeps.ProjectID) + "/" + fmt.Sprintf("%d", taskWithDeps.ID) }
 							hx-target="body"
 							hx-swap="none"
 						>
@@ -370,7 +375,7 @@ templ TaskDetailPane(taskWithDeps model.TaskWithDependencies) {
 								<button
 									type="button"
 									class={ "w-full text-left px-4 py-2 text-sm hover:bg-gray-100 transition-colors flex items-center justify-between", templ.KV("font-semibold text-indigo-800", status == taskWithDeps.Status), templ.KV("text-gray-700", status != taskWithDeps.Status) }
-									hx-patch={ "/tasks/" + fmt.Sprintf("%d", taskWithDeps.ID) + "/status" }
+									hx-patch={ taskURLPrefix(orgID, taskWithDeps.ProjectID) + "/" + fmt.Sprintf("%d", taskWithDeps.ID) + "/status" }
 									hx-vals={ fmt.Sprintf(`{"status": "%s"}`, status) }
 									hx-target="body"
 									hx-swap="none"
@@ -386,11 +391,11 @@ templ TaskDetailPane(taskWithDeps model.TaskWithDependencies) {
 				</div>
 				<!-- Dependencies Section -->
 				<div id={ "dependency-section-" + fmt.Sprintf("%d", taskWithDeps.ID) }>
-					@DependencySection(taskWithDeps)
+					@DependencySection(taskWithDeps, orgID)
 				</div>
 				<!-- Metadata Section -->
 				<div id={ "metadata-section-" + fmt.Sprintf("%d", taskWithDeps.ID) }>
-					@MetadataSection(taskWithDeps.ID, taskWithDeps.Metadata)
+					@MetadataSection(taskWithDeps.ID, orgID, taskWithDeps.ProjectID, taskWithDeps.Metadata)
 				</div>
 			</div>
 		</div>
@@ -399,7 +404,7 @@ templ TaskDetailPane(taskWithDeps model.TaskWithDependencies) {
 }
 
 // DependencySection renders the dependencies section (for htmx swaps).
-templ DependencySection(taskWithDeps model.TaskWithDependencies) {
+templ DependencySection(taskWithDeps model.TaskWithDependencies, orgID int64) {
 	<div id={ "dependency-section-" + fmt.Sprintf("%d", taskWithDeps.ID) } class="space-y-4 border-t border-gray-200 pt-6">
 		<div class="flex items-center justify-between">
 			<label class="block text-xs font-medium text-gray-500 uppercase tracking-wide">Dependencies</label>
@@ -414,7 +419,7 @@ templ DependencySection(taskWithDeps model.TaskWithDependencies) {
 							<button
 								type="button"
 								class="flex-1 text-left px-3 py-2 bg-gray-50 hover:bg-gray-100 rounded-lg border border-gray-200 transition-colors"
-								hx-get={ "/tasks/" + fmt.Sprintf("%d", dep.ID) + "/detail" }
+								hx-get={ taskURLPrefix(orgID, dep.ProjectID) + "/" + fmt.Sprintf("%d", dep.ID) + "/detail" }
 								hx-target="#detail-pane"
 								hx-swap="outerHTML"
 							>
@@ -424,7 +429,7 @@ templ DependencySection(taskWithDeps model.TaskWithDependencies) {
 							<button
 								type="button"
 								class="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-red-500"
-								hx-delete={ "/tasks/" + fmt.Sprintf("%d", taskWithDeps.ID) + "/dependencies/" + fmt.Sprintf("%d", dep.ID) }
+								hx-delete={ taskURLPrefix(orgID, taskWithDeps.ProjectID) + "/" + fmt.Sprintf("%d", taskWithDeps.ID) + "/dependencies/" + fmt.Sprintf("%d", dep.ID) }
 								hx-target={ "#dependency-section-" + fmt.Sprintf("%d", taskWithDeps.ID) }
 								hx-swap="outerHTML"
 							>
@@ -448,7 +453,7 @@ templ DependencySection(taskWithDeps model.TaskWithDependencies) {
 						<button
 							type="button"
 							class="w-full text-left px-3 py-2 bg-gray-50 hover:bg-gray-100 rounded-lg border border-gray-200 transition-colors"
-							hx-get={ "/tasks/" + fmt.Sprintf("%d", dep.ID) + "/detail" }
+							hx-get={ taskURLPrefix(orgID, dep.ProjectID) + "/" + fmt.Sprintf("%d", dep.ID) + "/detail" }
 							hx-target="#detail-pane"
 							hx-swap="outerHTML"
 						>
@@ -475,7 +480,7 @@ templ DependencySection(taskWithDeps model.TaskWithDependencies) {
 				class="hidden"
 			>
 				<form
-					hx-post={ "/tasks/" + fmt.Sprintf("%d", taskWithDeps.ID) + "/dependencies" }
+					hx-post={ taskURLPrefix(orgID, taskWithDeps.ProjectID) + "/" + fmt.Sprintf("%d", taskWithDeps.ID) + "/dependencies" }
 					hx-target={ "#dependency-section-" + fmt.Sprintf("%d", taskWithDeps.ID) }
 					hx-swap="outerHTML"
 					class="flex gap-2"
@@ -504,7 +509,7 @@ templ DependencySection(taskWithDeps model.TaskWithDependencies) {
 }
 
 // MetadataSection renders the metadata key-value pairs (for htmx swaps).
-templ MetadataSection(taskID int64, metadata model.TaskMetadata) {
+templ MetadataSection(taskID int64, orgID int64, projectID int64, metadata model.TaskMetadata) {
 	<div id={ "metadata-section-" + fmt.Sprintf("%d", taskID) } class="space-y-4 border-t border-gray-200 pt-6">
 		<div class="flex items-center justify-between">
 			<label class="block text-xs font-medium text-gray-500 uppercase tracking-wide">Metadata</label>
@@ -512,7 +517,7 @@ templ MetadataSection(taskID int64, metadata model.TaskMetadata) {
 		if len(metadata) > 0 {
 			<div class="space-y-2">
 				for _, key := range getSortedMetadataKeys(metadata) {
-					@MetadataItem(taskID, key, metadata[key])
+					@MetadataItem(taskID, orgID, projectID, key, metadata[key])
 				}
 			</div>
 		} else {
@@ -532,7 +537,7 @@ templ MetadataSection(taskID int64, metadata model.TaskMetadata) {
 				class="hidden"
 			>
 				<form
-					hx-post={ "/tasks/" + fmt.Sprintf("%d", taskID) + "/metadata" }
+					hx-post={ taskURLPrefix(orgID, projectID) + "/" + fmt.Sprintf("%d", taskID) + "/metadata" }
 					hx-target={ "#metadata-section-" + fmt.Sprintf("%d", taskID) }
 					hx-swap="outerHTML"
 					class="space-y-2"
@@ -724,7 +729,7 @@ templ detailPaneScript() {
 }
 
 // TitleDisplay renders just the title display section for OOB swaps
-templ TitleDisplay(taskWithDeps model.TaskWithDependencies) {
+templ TitleDisplay(taskWithDeps model.TaskWithDependencies, orgID int64) {
 	<div
 		class="editable-field group"
 		id={ "title-display-" + fmt.Sprintf("%d", taskWithDeps.ID) }
@@ -755,7 +760,7 @@ templ TitleDisplay(taskWithDeps model.TaskWithDependencies) {
 }
 
 // DescriptionDisplay renders just the description display section for OOB swaps
-templ DescriptionDisplay(taskWithDeps model.TaskWithDependencies) {
+templ DescriptionDisplay(taskWithDeps model.TaskWithDependencies, orgID int64) {
 	<div
 		class="editable-field group"
 		id={ "description-display-" + fmt.Sprintf("%d", taskWithDeps.ID) }
@@ -790,7 +795,7 @@ templ DescriptionDisplay(taskWithDeps model.TaskWithDependencies) {
 }
 
 // AuthorDisplay renders just the author display section for OOB swaps
-templ AuthorDisplay(taskWithDeps model.TaskWithDependencies) {
+templ AuthorDisplay(taskWithDeps model.TaskWithDependencies, orgID int64) {
 	<div
 		class="editable-field group"
 		id={ "author-display-" + fmt.Sprintf("%d", taskWithDeps.ID) }
@@ -825,7 +830,7 @@ templ AuthorDisplay(taskWithDeps model.TaskWithDependencies) {
 }
 
 // StatusBadge renders just the status badge for OOB swaps (within status section)
-templ StatusBadge(taskWithDeps model.TaskWithDependencies) {
+templ StatusBadge(taskWithDeps model.TaskWithDependencies, orgID int64) {
 	<div class="relative" id={ "status-badge-" + fmt.Sprintf("%d", taskWithDeps.ID) } hx-swap-oob="true">
 		<!-- Clickable Status Badge -->
 		<button
@@ -848,7 +853,7 @@ templ StatusBadge(taskWithDeps model.TaskWithDependencies) {
 				<button
 					type="button"
 					class={ "w-full text-left px-4 py-2 text-sm hover:bg-gray-100 transition-colors flex items-center justify-between", templ.KV("font-semibold text-indigo-800", status == taskWithDeps.Status), templ.KV("text-gray-700", status != taskWithDeps.Status) }
-					hx-patch={ "/tasks/" + fmt.Sprintf("%d", taskWithDeps.ID) + "/status" }
+					hx-patch={ taskURLPrefix(orgID, taskWithDeps.ProjectID) + "/" + fmt.Sprintf("%d", taskWithDeps.ID) + "/status" }
 					hx-vals={ fmt.Sprintf(`{"status": "%s"}`, status) }
 					hx-target="body"
 					hx-swap="none"
@@ -864,7 +869,7 @@ templ StatusBadge(taskWithDeps model.TaskWithDependencies) {
 }
 
 // MetadataItem renders a single metadata key-value pair with inline editing
-templ MetadataItem(taskID int64, key string, value interface{}) {
+templ MetadataItem(taskID int64, orgID int64, projectID int64, key string, value interface{}) {
 	<div class="flex items-start gap-2 group">
 		<!-- Display Mode -->
 		<div
@@ -901,7 +906,7 @@ templ MetadataItem(taskID int64, key string, value interface{}) {
 		<button
 			type="button"
 			class="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-red-500 mt-2"
-			hx-delete={ "/tasks/" + fmt.Sprintf("%d", taskID) + "/metadata/" + urlEncodeKey(key) }
+			hx-delete={ taskURLPrefix(orgID, projectID) + "/" + fmt.Sprintf("%d", taskID) + "/metadata/" + urlEncodeKey(key) }
 			hx-target={ "#metadata-section-" + fmt.Sprintf("%d", taskID) }
 			hx-swap="outerHTML"
 			title="Delete"
@@ -916,7 +921,7 @@ templ MetadataItem(taskID int64, key string, value interface{}) {
 			class="hidden flex-1"
 		>
 			<form
-				hx-patch={ "/tasks/" + fmt.Sprintf("%d", taskID) + "/metadata/" + urlEncodeKey(key) }
+				hx-patch={ taskURLPrefix(orgID, projectID) + "/" + fmt.Sprintf("%d", taskID) + "/metadata/" + urlEncodeKey(key) }
 				hx-target={ "#metadata-section-" + fmt.Sprintf("%d", taskID) }
 				hx-swap="outerHTML"
 				class="space-y-2"
@@ -972,7 +977,7 @@ templ MetadataItem(taskID int64, key string, value interface{}) {
 }
 
 // DueDateDisplay renders just the due date display section for OOB swaps
-templ DueDateDisplay(taskWithDeps model.TaskWithDependencies) {
+templ DueDateDisplay(taskWithDeps model.TaskWithDependencies, orgID int64) {
 	<div
 		class="editable-field group"
 		id={ "duedate-display-" + fmt.Sprintf("%d", taskWithDeps.ID) }
@@ -998,14 +1003,14 @@ templ DueDateDisplay(taskWithDeps model.TaskWithDependencies) {
 }
 
 // DueDateForm renders just the due date edit form for OOB swaps
-templ DueDateForm(taskWithDeps model.TaskWithDependencies) {
+templ DueDateForm(taskWithDeps model.TaskWithDependencies, orgID int64) {
 	<div
 		class="editable-form hidden"
 		id={ "duedate-form-" + fmt.Sprintf("%d", taskWithDeps.ID) }
 		hx-swap-oob="true"
 	>
 		<form
-			hx-patch={ "/tasks/" + fmt.Sprintf("%d", taskWithDeps.ID) }
+			hx-patch={ taskURLPrefix(orgID, taskWithDeps.ProjectID) + "/" + fmt.Sprintf("%d", taskWithDeps.ID) }
 			hx-target="body"
 			hx-swap="none"
 		>

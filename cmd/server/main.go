@@ -7,10 +7,13 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"cracked-pm/internal/handler"
+	"cracked-pm/internal/middleware"
 	"cracked-pm/internal/store"
 	"cracked-pm/migrations"
+	"cracked-pm/views"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/logger"
@@ -51,9 +54,24 @@ func main() {
 	s := store.New(db)
 	h := handler.New(s)
 
-	// Create Fiber app.
+	// Create Fiber app with custom error handler.
 	app := fiber.New(fiber.Config{
 		AppName: "cracked-pm",
+		ErrorHandler: func(c fiber.Ctx, err error) error {
+			code := fiber.StatusInternalServerError
+			if e, ok := err.(*fiber.Error); ok {
+				code = e.Code
+			}
+
+			if code == fiber.StatusForbidden {
+				c.Set("Content-Type", "text/html; charset=utf-8")
+				return views.ForbiddenPage().Render(c.Context(), c.Response().BodyWriter())
+			}
+
+			// Default Fiber error handler behavior.
+			c.Set("Content-Type", "text/plain; charset=utf-8")
+			return c.Status(code).SendString(err.Error())
+		},
 	})
 
 	app.Use(recover.New())
@@ -62,21 +80,49 @@ func main() {
 	// Static files.
 	app.Get("/static/*", static.New("./static"))
 
-	// Routes.
-	app.Get("/", h.HandleHome)
-	app.Get("/tasks/new-form", h.HandleNewTaskForm)
-	app.Get("/tasks/cancel-form", h.HandleCancelForm)
-	app.Post("/tasks", h.HandleCreateTask)
-	app.Patch("/tasks/:id/move", h.HandleMoveTask)
-	app.Delete("/tasks/:id", h.HandleDeleteTask)
-	app.Get("/tasks/:id/detail", h.HandleTaskDetail)
-	app.Patch("/tasks/:id", h.HandleUpdateTask)
-	app.Patch("/tasks/:id/status", h.HandleUpdateStatus)
-	app.Post("/tasks/:id/dependencies", h.HandleAddDependency)
-	app.Delete("/tasks/:id/dependencies/:depID", h.HandleRemoveDependency)
-	app.Post("/tasks/:id/metadata", h.HandleAddMetadata)
-	app.Patch("/tasks/:id/metadata/:oldKey", h.HandleUpdateMetadata)
-	app.Delete("/tasks/:id/metadata/:key", h.HandleDeleteMetadata)
+	// --- Public routes (no auth) ---
+	app.Get("/login", h.HandleShowLogin)
+	app.Post("/login", h.HandleLogin)
+	app.Get("/signup", h.HandleShowSignup)
+	app.Post("/signup", h.HandleSignup)
+
+	// --- Authenticated routes ---
+	authed := app.Group("", middleware.RequireAuth(s))
+
+	authed.Post("/logout", h.HandleLogout)
+	authed.Get("/", h.HandleLandingPage)
+	authed.Get("/projects", h.HandleProjectPicker)
+
+	// --- Org-scoped routes (auth + membership check) ---
+	org := authed.Group("/orgs/:org_id", middleware.RequireOrgAccess(s))
+
+	// Project creation.
+	org.Get("/projects/new", h.HandleShowCreateProject)
+	org.Post("/projects", h.HandleCreateProject)
+
+	// Board view.
+	org.Get("/projects/:project_id", h.HandleBoard)
+
+	// Task routes.
+	tasks := org.Group("/projects/:project_id/tasks")
+	tasks.Get("/new-form", h.HandleNewTaskForm)
+	tasks.Get("/cancel-form", h.HandleCancelForm)
+	tasks.Post("/", h.HandleCreateTask)
+	tasks.Patch("/:id/move", h.HandleMoveTask)
+	tasks.Delete("/:id", h.HandleDeleteTask)
+	tasks.Get("/:id/detail", h.HandleTaskDetail)
+	tasks.Patch("/:id", h.HandleUpdateTask)
+	tasks.Patch("/:id/status", h.HandleUpdateStatus)
+	tasks.Post("/:id/dependencies", h.HandleAddDependency)
+	tasks.Delete("/:id/dependencies/:depID", h.HandleRemoveDependency)
+	tasks.Post("/:id/metadata", h.HandleAddMetadata)
+	tasks.Patch("/:id/metadata/:oldKey", h.HandleUpdateMetadata)
+	tasks.Delete("/:id/metadata/:key", h.HandleDeleteMetadata)
+
+	// Background session cleanup (every hour).
+	cleanupCtx, cleanupCancel := context.WithCancel(context.Background())
+	defer cleanupCancel()
+	go sessionCleanup(cleanupCtx, s)
 
 	// Graceful shutdown.
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -92,7 +138,28 @@ func main() {
 
 	<-ctx.Done()
 	log.Println("shutting down...")
+	cleanupCancel()
 	_ = app.Shutdown()
+}
+
+// sessionCleanup periodically removes expired sessions from the database.
+func sessionCleanup(ctx context.Context, s *store.Store) {
+	ticker := time.NewTicker(1 * time.Hour)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			count, err := s.DeleteExpiredSessions(ctx)
+			if err != nil {
+				log.Printf("session cleanup error: %v", err)
+			} else if count > 0 {
+				log.Printf("session cleanup: removed %d expired sessions", count)
+			}
+		}
+	}
 }
 
 func envOr(key, fallback string) string {

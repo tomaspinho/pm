@@ -2,10 +2,10 @@ package components
 
 import "fmt"
 
-templ AddTaskForm(status string, projectID int64) {
+templ AddTaskForm(status string, orgID int64, projectID int64) {
 	<form
 		class="bg-white rounded-lg border border-gray-200 p-3 shadow-sm"
-		hx-post="/tasks"
+		hx-post={ fmt.Sprintf("/orgs/%d/projects/%d/tasks", orgID, projectID) }
 		hx-target={ "#task-list-" + status }
 		hx-swap="beforeend"
 		hx-disabled-elt="find button[type='submit']"
@@ -46,7 +46,7 @@ templ AddTaskForm(status string, projectID int64) {
 				<button
 					type="button"
 					class="px-3 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 rounded hover:bg-gray-200 transition-colors"
-					hx-get={ "/tasks/cancel-form?status=" + status }
+					hx-get={ fmt.Sprintf("/orgs/%d/projects/%d/tasks/cancel-form?status=%s", orgID, projectID, status) }
 					hx-target={ "#add-form-" + status }
 					hx-swap="innerHTML"
 				>

@@ -16,7 +16,7 @@ func dueDateBadgeClass(task model.Task) string {
 	return "bg-gray-100 text-gray-600 border-gray-300"
 }
 
-templ TaskCard(task model.Task) {
+templ TaskCard(task model.Task, orgID int64) {
 	<div
 		class="task-card bg-white rounded-lg shadow-sm border border-gray-200 p-3 cursor-grab active:cursor-grabbing hover:shadow-md transition-all duration-150"
 		data-id={ fmt.Sprintf("%d", task.ID) }
@@ -35,7 +35,7 @@ templ TaskCard(task model.Task) {
 			</span>
 			<div
 				class="flex-1 min-w-0 cursor-pointer"
-				hx-get={ "/tasks/" + fmt.Sprintf("%d", task.ID) + "/detail" }
+				hx-get={ fmt.Sprintf("/orgs/%d/projects/%d/tasks/%d/detail", orgID, task.ProjectID, task.ID) }
 				hx-target="body"
 				hx-swap="beforeend"
 			>
@@ -55,7 +55,7 @@ templ TaskCard(task model.Task) {
 			<button
 				type="button"
 				class="delete-btn shrink-0 text-gray-400 hover:text-red-500 transition-colors"
-				hx-delete={ "/tasks/" + fmt.Sprintf("%d", task.ID) }
+				hx-delete={ fmt.Sprintf("/orgs/%d/projects/%d/tasks/%d", orgID, task.ProjectID, task.ID) }
 				hx-target={ "#task-" + fmt.Sprintf("%d", task.ID) }
 				hx-swap="outerHTML swap:1s"
 				data-confirm-delete="true"

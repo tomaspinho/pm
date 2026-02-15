@@ -7,8 +7,8 @@ import (
 	"cracked-pm/views/components"
 )
 
-templ BoardPage(project model.Project, tasksByStatus map[string][]model.Task) {
-	@Layout(project.Name) {
+templ BoardPage(project model.Project, tasksByStatus map[string][]model.Task, nav NavContext) {
+	@AuthLayout(project.Name, nav) {
 		<div class="space-y-6">
 			<div>
 				<h1 class="text-2xl font-bold text-gray-900">{ project.Name }</h1>
@@ -18,15 +18,15 @@ templ BoardPage(project model.Project, tasksByStatus map[string][]model.Task) {
 			</div>
 			<div id="kanban-board" class="grid grid-cols-3 gap-6">
 				for _, status := range model.AllStatuses() {
-					@Column(status, project.ID, tasksByStatus[status])
+					@Column(status, project, tasksByStatus[status])
 				}
 			</div>
 		</div>
-		@kanbanScript()
+		@kanbanScript(project.OrganizationID, project.ID)
 	}
 }
 
-templ Column(status string, projectID int64, tasks []model.Task) {
+templ Column(status string, project model.Project, tasks []model.Task) {
 	<div class="flex flex-col">
 		<div class="flex items-center gap-2 mb-3">
 			<h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">
@@ -45,18 +45,21 @@ templ Column(status string, projectID int64, tasks []model.Task) {
 			data-status={ status }
 		>
 			for _, task := range tasks {
-				@components.TaskCard(task)
+				@components.TaskCard(task, project.OrganizationID)
 			}
 		</div>
 		<div id={ "add-form-" + status } class="mt-2">
-			@components.AddTaskButton(status)
+			@components.AddTaskButton(status, project.OrganizationID, project.ID)
 		</div>
 	</div>
 }
 
-templ kanbanScript() {
+templ kanbanScript(orgID int64, projectID int64) {
 	<script>
 	(function() {
+		var orgID = { fmt.Sprintf("%d", orgID) };
+		var projectID = { fmt.Sprintf("%d", projectID) };
+
 		function initKanban() {
 			var columns = document.querySelectorAll(".sortable-column");
 			columns.forEach(function(col) {
@@ -85,7 +88,7 @@ templ kanbanScript() {
 						var newStatus = evt.to.dataset.status;
 						var newPosition = evt.newIndex;
 
-						htmx.ajax("PATCH", "/tasks/" + taskId + "/move", {
+						htmx.ajax("PATCH", "/orgs/" + orgID + "/projects/" + projectID + "/tasks/" + taskId + "/move", {
 							values: {
 								status: newStatus,
 								position: newPosition
@@ -108,15 +111,15 @@ func intToStr(n int) string {
 }
 
 // NewTaskResponse returns the new task card plus out-of-band updates.
-templ NewTaskResponse(task model.Task, status string, count int) {
-	@components.TaskCard(task)
+templ NewTaskResponse(task model.Task, orgID int64, status string, count int) {
+	@components.TaskCard(task, orgID)
 	<!-- Out-of-band: update count -->
 	<span id={ "count-" + status } hx-swap-oob="true" class="text-xs text-gray-400 bg-gray-100 rounded-full px-2 py-0.5">
 		{ intToStr(count) }
 	</span>
 	<!-- Out-of-band: reset form to button -->
 	<div id={ "add-form-" + status } hx-swap-oob="true" class="mt-2">
-		@components.AddTaskButton(status)
+		@components.AddTaskButton(status, orgID, task.ProjectID)
 	</div>
 }
 
@@ -128,40 +131,40 @@ templ DeleteTaskResponse(status string, count int) {
 }
 
 // TaskDetailPane wraps the component for use in handlers.
-templ TaskDetailPane(taskWithDeps model.TaskWithDependencies) {
-	@components.TaskDetailPane(taskWithDeps)
+templ TaskDetailPane(taskWithDeps model.TaskWithDependencies, orgID int64) {
+	@components.TaskDetailPane(taskWithDeps, orgID)
 }
 
 // DependencySection wraps the component for use in handlers.
-templ DependencySection(taskWithDeps model.TaskWithDependencies) {
-	@components.DependencySection(taskWithDeps)
+templ DependencySection(taskWithDeps model.TaskWithDependencies, orgID int64) {
+	@components.DependencySection(taskWithDeps, orgID)
 }
 
 // MetadataSection wraps the component for use in handlers.
-templ MetadataSection(taskID int64, metadata model.TaskMetadata) {
-	@components.MetadataSection(taskID, metadata)
+templ MetadataSection(taskID int64, orgID int64, projectID int64, metadata model.TaskMetadata) {
+	@components.MetadataSection(taskID, orgID, projectID, metadata)
 }
 
 // TaskFieldUpdateResponse returns OOB updates for individual task fields (no full pane reload).
-templ TaskFieldUpdateResponse(taskWithDeps model.TaskWithDependencies) {
-	@components.TitleDisplay(taskWithDeps)
-	@components.DescriptionDisplay(taskWithDeps)
-	@components.AuthorDisplay(taskWithDeps)
-	@components.DueDateDisplay(taskWithDeps)
-	@components.DueDateForm(taskWithDeps)
+templ TaskFieldUpdateResponse(taskWithDeps model.TaskWithDependencies, orgID int64) {
+	@components.TitleDisplay(taskWithDeps, orgID)
+	@components.DescriptionDisplay(taskWithDeps, orgID)
+	@components.AuthorDisplay(taskWithDeps, orgID)
+	@components.DueDateDisplay(taskWithDeps, orgID)
+	@components.DueDateForm(taskWithDeps, orgID)
 	<!-- Update the task card on the kanban board -->
 	<div
 		id={ "task-" + fmt.Sprintf("%d", taskWithDeps.ID) }
 		hx-swap-oob="true"
 	>
-		@components.TaskCard(taskWithDeps.Task)
+		@components.TaskCard(taskWithDeps.Task, orgID)
 	</div>
 }
 
 // StatusUpdateResponse returns OOB updates for status badge and kanban columns (no full pane reload).
-templ StatusUpdateResponse(taskWithDeps model.TaskWithDependencies, oldStatus string, tasksByStatus map[string][]model.Task) {
+templ StatusUpdateResponse(taskWithDeps model.TaskWithDependencies, orgID int64, oldStatus string, tasksByStatus map[string][]model.Task) {
 	<!-- Update status badge -->
-	@components.StatusBadge(taskWithDeps)
+	@components.StatusBadge(taskWithDeps, orgID)
 	if oldStatus != taskWithDeps.Status {
 		<!-- Out-of-band: update old status column task list -->
 		<div
@@ -171,7 +174,7 @@ templ StatusUpdateResponse(taskWithDeps model.TaskWithDependencies, oldStatus st
 			hx-swap-oob="true"
 		>
 			for _, task := range tasksByStatus[oldStatus] {
-				@components.TaskCard(task)
+				@components.TaskCard(task, orgID)
 			}
 		</div>
 		<!-- Out-of-band: update old status count -->
@@ -191,7 +194,7 @@ templ StatusUpdateResponse(taskWithDeps model.TaskWithDependencies, oldStatus st
 		hx-swap-oob="true"
 	>
 		for _, task := range tasksByStatus[taskWithDeps.Status] {
-			@components.TaskCard(task)
+			@components.TaskCard(task, orgID)
 		}
 	</div>
 	<!-- Out-of-band: update new status count -->

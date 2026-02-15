@@ -1,10 +1,12 @@
 package components
 
-templ AddTaskButton(status string) {
+import "fmt"
+
+templ AddTaskButton(status string, orgID int64, projectID int64) {
 	<button
 		type="button"
 		class="w-full text-left px-3 py-2 text-sm text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-		hx-get={ "/tasks/new-form?status=" + status }
+		hx-get={ fmt.Sprintf("/orgs/%d/projects/%d/tasks/new-form?status=%s", orgID, projectID, status) }
 		hx-target={ "#add-form-" + status }
 		hx-swap="innerHTML"
 	>

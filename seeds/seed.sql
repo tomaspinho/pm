@@ -2,9 +2,24 @@
 -- Idempotent: uses ON CONFLICT to skip existing rows.
 -- Run with: mise run db:seed
 
--- Default project
-INSERT INTO projects (id, name, description)
-VALUES (1, 'My Project', 'A sample project to get started with cracked-pm')
+-- Default user (password: changeme123)
+INSERT INTO users (id, email, password_hash)
+VALUES (1, 'admin@example.com', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy')
+ON CONFLICT (id) DO NOTHING;
+
+-- Default organization for the user
+INSERT INTO organizations (id, name, owner_user_id)
+VALUES (1, 'admin@example.com''s Organization', 1)
+ON CONFLICT (id) DO NOTHING;
+
+-- Add user as member of their organization
+INSERT INTO organization_members (organization_id, user_id)
+VALUES (1, 1)
+ON CONFLICT (organization_id, user_id) DO NOTHING;
+
+-- Default project (now owned by the organization)
+INSERT INTO projects (id, name, description, organization_id)
+VALUES (1, 'My Project', 'A sample project to get started with cracked-pm', 1)
 ON CONFLICT (id) DO NOTHING;
 
 -- Example tasks in different statuses
@@ -23,5 +38,7 @@ VALUES
 ON CONFLICT (task_id, depends_on_id) DO NOTHING;
 
 -- Reset sequences to avoid conflicts with future inserts.
+SELECT setval('users_id_seq', (SELECT COALESCE(MAX(id), 0) FROM users));
+SELECT setval('organizations_id_seq', (SELECT COALESCE(MAX(id), 0) FROM organizations));
 SELECT setval('projects_id_seq', (SELECT COALESCE(MAX(id), 0) FROM projects));
 SELECT setval('tasks_id_seq',    (SELECT COALESCE(MAX(id), 0) FROM tasks));
