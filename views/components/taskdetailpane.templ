@@ -470,7 +470,7 @@ templ DependencySection(taskWithDeps model.TaskWithDependencies, orgID int64) {
 		<div class="space-y-2">
 			<button
 				type="button"
-				class="text-sm font-medium text-indigo-600 hover:text-indigo-700"
+				class="text-sm font-medium text-indigo-600 hover:text-indigo-700 cursor-pointer"
 				onclick={ toggleAddDependencyForm(fmt.Sprintf("%d", taskWithDeps.ID)) }
 			>
 				+ Add Dependency
@@ -527,7 +527,7 @@ templ MetadataSection(taskID int64, orgID int64, projectID int64, metadata model
 		<div class="space-y-2">
 			<button
 				type="button"
-				class="text-sm font-medium text-indigo-600 hover:text-indigo-700"
+				class="text-sm font-medium text-indigo-600 hover:text-indigo-700 cursor-pointer"
 				onclick={ toggleAddMetadataForm(fmt.Sprintf("%d", taskID)) }
 			>
 				+ Add Metadata
