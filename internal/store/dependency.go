@@ -71,6 +71,13 @@ func (s *Store) GetTaskWithDependencies(ctx context.Context, taskID int64) (*mod
 	result.HasCycle = cycle
 	result.CyclePath = cyclePath
 
+	// Count comments
+	count, err := s.CountTaskComments(ctx, taskID)
+	if err != nil {
+		return nil, fmt.Errorf("counting comments: %w", err)
+	}
+	result.CommentCount = count
+
 	return result, nil
 }
 

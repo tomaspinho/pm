@@ -119,6 +119,12 @@ func main() {
 	tasks.Patch("/:id/metadata/:oldKey", h.HandleUpdateMetadata)
 	tasks.Delete("/:id/metadata/:key", h.HandleDeleteMetadata)
 
+	// Comment routes
+	tasks.Post("/:id/comments", h.HandleCreateComment)
+	tasks.Post("/:id/comments/:parent_id/reply", h.HandleReplyToComment)
+	tasks.Patch("/:id/comments/:comment_id", h.HandleUpdateComment)
+	tasks.Delete("/:id/comments/:comment_id", h.HandleDeleteComment)
+
 	// Background session cleanup (every hour).
 	cleanupCtx, cleanupCancel := context.WithCancel(context.Background())
 	defer cleanupCancel()

@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"time"
 
+	"cracked-pm/internal/middleware"
 	"cracked-pm/internal/store"
 	"cracked-pm/views"
 	"cracked-pm/views/components"
@@ -178,7 +179,7 @@ func (h *Handler) HandleDeleteTask(c fiber.Ctx) error {
 // HandleTaskDetail returns the detail pane for a task.
 // GET /orgs/:org_id/projects/:project_id/tasks/:id/detail
 func (h *Handler) HandleTaskDetail(c fiber.Ctx) error {
-	orgID, _, err := parseOrgAndProject(c)
+	orgID, projectID, err := parseOrgAndProject(c)
 	if err != nil {
 		return err
 	}
@@ -188,12 +189,26 @@ func (h *Handler) HandleTaskDetail(c fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "invalid task id")
 	}
 
+	user, err := middleware.GetCurrentUser(c)
+	if err != nil {
+		return c.Redirect().To("/login")
+	}
+
 	taskWithDeps, err := h.store.GetTaskWithDependencies(c.Context(), taskID)
 	if err != nil {
 		return fiber.NewError(fiber.StatusNotFound, "task not found")
 	}
 
-	return render(c, views.TaskDetailPane(*taskWithDeps, orgID))
+	// Load comments
+	comments, err := h.store.ListTaskComments(c.Context(), taskID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to load comments")
+	}
+
+	// Build comment tree with max depth 3
+	commentTree := store.BuildCommentTree(comments, 3)
+
+	return render(c, views.TaskDetailPane(*taskWithDeps, orgID, projectID, commentTree, user))
 }
 
 // HandleUpdateTask updates a task's basic fields.

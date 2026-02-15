@@ -1,0 +1,269 @@
+package components
+
+import (
+	"fmt"
+	"time"
+
+	"cracked-pm/internal/model"
+	"cracked-pm/internal/util"
+)
+
+// Helper function to build org-scoped task URL prefix for comments
+func commentURLPrefix(orgID int64, projectID int64, taskID int64) string {
+	return fmt.Sprintf("/orgs/%d/projects/%d/tasks/%d", orgID, projectID, taskID)
+}
+
+// Helper function to check if a comment has any visible replies (recursive)
+// A reply is visible if it's not deleted OR if it's deleted but has visible replies
+func hasVisibleReplies(comment model.CommentThread) bool {
+	for _, reply := range comment.Replies {
+		// Reply is visible if not deleted, or if deleted but has visible descendants
+		if !reply.IsDeleted() || hasVisibleReplies(reply) {
+			return true
+		}
+	}
+	return false
+}
+
+// Helper function to count total visible comments (non-deleted, or deleted with visible replies)
+func countTotalComments(comments []model.CommentThread) int {
+	count := 0
+	for _, c := range comments {
+		// Count this comment if it's not deleted, OR if it's deleted but has visible replies
+		if !c.IsDeleted() || hasVisibleReplies(c) {
+			count++
+		}
+		count += countTotalComments(c.Replies)
+	}
+	return count
+}
+
+// CommentSection renders the entire comment thread.
+templ CommentSection(taskID, orgID, projectID int64, comments []model.CommentThread, currentUser *model.User) {
+	<div id={ "comments-section-" + fmt.Sprintf("%d", taskID) } class="space-y-4 border-t border-gray-200 pt-6">
+		<h3 class="text-lg font-semibold text-gray-900">
+			Comments ({ fmt.Sprintf("%d", countTotalComments(comments)) })
+		</h3>
+		if len(comments) == 0 {
+			<p class="text-sm text-gray-400 italic">No comments yet. Be the first to comment!</p>
+		}
+		<!-- Comment list -->
+		<div class="space-y-4">
+			for _, comment := range comments {
+				@CommentItem(comment, taskID, orgID, projectID, currentUser, 3)
+			}
+		</div>
+		<!-- Add comment form (top-level) -->
+		@CommentForm(taskID, orgID, projectID, nil, "Add a comment...")
+	</div>
+}
+
+// CommentItem renders a single comment and its replies (recursive).
+// Deleted comments without visible replies are not rendered at all.
+templ CommentItem(comment model.CommentThread, taskID, orgID, projectID int64, currentUser *model.User, maxDepth int) {
+	// Only render if comment is not deleted, OR if deleted but has visible replies
+	if !comment.IsDeleted() || hasVisibleReplies(comment) {
+		<div class={ "comment-item", templ.KV("ml-6 pl-4 border-l-2 border-gray-200", comment.Depth > 0) }>
+			<!-- Comment header: author + timestamp -->
+			<div class="flex items-baseline gap-2 mb-1">
+				<span class="text-sm font-medium text-gray-900">{ comment.AuthorEmail }</span>
+				<time
+					class="text-xs text-gray-500"
+					datetime={ comment.CreatedAt.Format(time.RFC3339) }
+					title={ util.FormatAbsoluteTime(comment.CreatedAt) }
+				>
+					{ util.RelativeTime(comment.CreatedAt) }
+				</time>
+				if comment.IsEdited() {
+					<span class="text-xs text-gray-400 italic">(edited)</span>
+				}
+			</div>
+			<!-- Comment content or "[deleted]" -->
+			<div id={ "comment-display-" + fmt.Sprintf("%d", comment.ID) }>
+				if comment.IsDeleted() {
+					<p class="text-sm text-gray-400 italic">[deleted]</p>
+				} else {
+					@CommentDisplay(comment, taskID, orgID, projectID, currentUser.ID == comment.UserID)
+				}
+			</div>
+			<!-- Edit form (hidden by default) -->
+			<div id={ "comment-edit-form-" + fmt.Sprintf("%d", comment.ID) } class="hidden">
+				@CommentEditForm(comment, taskID, orgID, projectID)
+			</div>
+			<!-- Reply form (hidden by default) -->
+			<div id={ "reply-form-" + fmt.Sprintf("%d", comment.ID) } class="hidden mt-3">
+				@CommentForm(taskID, orgID, projectID, &comment.ID, "Write a reply...")
+			</div>
+			<!-- Replies (recursive) -->
+			if len(comment.Replies) > 0 {
+				<div class="mt-3 space-y-3">
+					for _, reply := range comment.Replies {
+						@CommentItem(reply, taskID, orgID, projectID, currentUser, maxDepth)
+					}
+				</div>
+			}
+		</div>
+	}
+}
+
+// CommentDisplay shows comment content + action buttons.
+templ CommentDisplay(comment model.CommentThread, taskID, orgID, projectID int64, isAuthor bool) {
+	<div class="space-y-2">
+		<p class="text-sm text-gray-700 whitespace-pre-wrap">{ comment.Content }</p>
+		<div class="flex items-center gap-3">
+			if comment.Depth < 3 {
+				<button
+					type="button"
+					class="text-xs text-indigo-600 hover:text-indigo-700 cursor-pointer"
+					onclick={ toggleReplyForm(fmt.Sprintf("%d", comment.ID)) }
+				>
+					Reply
+				</button>
+			} else {
+				<span class="text-xs text-gray-400 italic">Maximum nesting depth reached</span>
+			}
+			if isAuthor && !comment.IsDeleted() {
+				<button
+					type="button"
+					class="text-xs text-gray-600 hover:text-gray-700 cursor-pointer"
+					onclick={ showCommentEditForm(fmt.Sprintf("%d", comment.ID)) }
+				>
+					Edit
+				</button>
+				<button
+					type="button"
+					class="text-xs text-red-600 hover:text-red-700 cursor-pointer"
+					hx-delete={ commentURLPrefix(orgID, projectID, taskID) + "/comments/" + fmt.Sprintf("%d", comment.ID) }
+					hx-target={ "#comments-section-" + fmt.Sprintf("%d", taskID) }
+					hx-swap="outerHTML"
+					data-confirm-delete-comment="true"
+				>
+					Delete
+				</button>
+			}
+		</div>
+	</div>
+}
+
+// CommentDisplayOOB renders just the comment display for OOB swaps after edit.
+templ CommentDisplayOOB(comment model.CommentThread, taskID, orgID, projectID int64, isAuthor bool) {
+	<div id={ "comment-display-" + fmt.Sprintf("%d", comment.ID) } hx-swap-oob="true">
+		@CommentDisplay(comment, taskID, orgID, projectID, isAuthor)
+	</div>
+	<div id={ "comment-edit-form-" + fmt.Sprintf("%d", comment.ID) } class="hidden" hx-swap-oob="true"></div>
+}
+
+// CommentEditForm shows inline edit form.
+templ CommentEditForm(comment model.CommentThread, taskID, orgID, projectID int64) {
+	<form
+		hx-patch={ commentURLPrefix(orgID, projectID, taskID) + "/comments/" + fmt.Sprintf("%d", comment.ID) }
+		hx-target={ "#comment-display-" + fmt.Sprintf("%d", comment.ID) }
+		hx-swap="outerHTML"
+		class="space-y-2"
+	>
+		<textarea
+			name="content"
+			required
+			maxlength="10000"
+			rows="3"
+			class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-none"
+		>{ comment.Content }</textarea>
+		<div class="flex gap-2">
+			<button
+				type="submit"
+				class="px-3 py-1.5 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700"
+			>
+				Save
+			</button>
+			<button
+				type="button"
+				class="px-3 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+				onclick={ cancelCommentEdit(fmt.Sprintf("%d", comment.ID)) }
+			>
+				Cancel
+			</button>
+		</div>
+	</form>
+}
+
+// CommentForm shows the form to add a comment or reply.
+templ CommentForm(taskID, orgID, projectID int64, parentID *int64, placeholder string) {
+	<form
+		if parentID == nil {
+			hx-post={ commentURLPrefix(orgID, projectID, taskID) + "/comments" }
+		} else {
+			hx-post={ commentURLPrefix(orgID, projectID, taskID) + "/comments/" + fmt.Sprintf("%d", *parentID) + "/reply" }
+		}
+		hx-target={ "#comments-section-" + fmt.Sprintf("%d", taskID) }
+		hx-swap="outerHTML"
+		class="space-y-2"
+	>
+		<textarea
+			name="content"
+			placeholder={ placeholder }
+			required
+			maxlength="10000"
+			rows="3"
+			class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-none"
+		></textarea>
+		<div class="flex gap-2">
+			<button
+				type="submit"
+				class="px-3 py-1.5 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700"
+			>
+				if parentID == nil {
+					Comment
+				} else {
+					Reply
+				}
+			</button>
+			if parentID != nil {
+				<button
+					type="button"
+					class="px-3 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+					onclick={ toggleReplyForm(fmt.Sprintf("%d", *parentID)) }
+				>
+					Cancel
+				</button>
+			}
+		</div>
+	</form>
+}
+
+// JavaScript helpers for comment interactions
+script toggleReplyForm(commentID string) {
+	var form = document.getElementById('reply-form-' + commentID);
+	if (form.classList.contains('hidden')) {
+		form.classList.remove('hidden');
+		// Focus textarea
+		var textarea = form.querySelector('textarea');
+		if (textarea) {
+			setTimeout(function() { textarea.focus(); }, 10);
+		}
+	} else {
+		form.classList.add('hidden');
+		// Clear textarea
+		var textarea = form.querySelector('textarea');
+		if (textarea) textarea.value = '';
+	}
+}
+
+script showCommentEditForm(commentID string) {
+	document.getElementById('comment-display-' + commentID).classList.add('hidden');
+	document.getElementById('comment-edit-form-' + commentID).classList.remove('hidden');
+	// Focus textarea
+	var form = document.getElementById('comment-edit-form-' + commentID);
+	var textarea = form.querySelector('textarea');
+	if (textarea) {
+		setTimeout(function() { 
+			textarea.focus();
+			// Move cursor to end
+			textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+		}, 10);
+	}
+}
+
+script cancelCommentEdit(commentID string) {
+	document.getElementById('comment-display-' + commentID).classList.remove('hidden');
+	document.getElementById('comment-edit-form-' + commentID).classList.add('hidden');
+}

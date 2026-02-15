@@ -87,7 +87,7 @@ func formatDueDate(task model.Task) string {
 	return formatted
 }
 // TaskDetailPane renders the slide-out detail pane for a task.
-templ TaskDetailPane(taskWithDeps model.TaskWithDependencies, orgID int64) {
+templ TaskDetailPane(taskWithDeps model.TaskWithDependencies, orgID int64, projectID int64, comments []model.CommentThread, currentUser *model.User) {
 	<div id="detail-pane" class="detail-pane-backdrop fixed inset-0 bg-gray-900/50 backdrop-blur-sm z-50 flex justify-end">
 		<div class="detail-pane-panel bg-white w-full max-w-2xl h-full shadow-2xl overflow-y-auto">
 			<!-- Header -->
@@ -392,15 +392,19 @@ templ TaskDetailPane(taskWithDeps model.TaskWithDependencies, orgID int64) {
 				<!-- Dependencies Section -->
 				<div id={ "dependency-section-" + fmt.Sprintf("%d", taskWithDeps.ID) }>
 					@DependencySection(taskWithDeps, orgID)
-				</div>
-				<!-- Metadata Section -->
-				<div id={ "metadata-section-" + fmt.Sprintf("%d", taskWithDeps.ID) }>
-					@MetadataSection(taskWithDeps.ID, orgID, taskWithDeps.ProjectID, taskWithDeps.Metadata)
-				</div>
+			</div>
+			<!-- Metadata Section -->
+			<div id={ "metadata-section-" + fmt.Sprintf("%d", taskWithDeps.ID) }>
+				@MetadataSection(taskWithDeps.ID, orgID, taskWithDeps.ProjectID, taskWithDeps.Metadata)
+			</div>
+			<!-- Comments Section -->
+			<div id={ "comments-section-" + fmt.Sprintf("%d", taskWithDeps.ID) }>
+				@CommentSection(taskWithDeps.ID, orgID, projectID, comments, currentUser)
 			</div>
 		</div>
 	</div>
-	@detailPaneScript()
+</div>
+@detailPaneScript()
 }
 
 // DependencySection renders the dependencies section (for htmx swaps).

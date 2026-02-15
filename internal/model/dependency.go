@@ -12,8 +12,9 @@ type TaskDependency struct {
 // TaskWithDependencies includes the full dependency information.
 type TaskWithDependencies struct {
 	Task
-	BlockedBy     []Task `db:"-" json:"blocked_by"`     // Tasks this depends on
-	Blocking      []Task `db:"-" json:"blocking"`       // Tasks that depend on this
-	HasCycle      bool   `db:"-" json:"has_cycle"`      // Whether a circular dependency exists
-	CyclePath     []int64 `db:"-" json:"cycle_path"`    // The path of the cycle if it exists
+	BlockedBy    []Task  `db:"-" json:"blocked_by"`    // Tasks this depends on
+	Blocking     []Task  `db:"-" json:"blocking"`      // Tasks that depend on this
+	HasCycle     bool    `db:"-" json:"has_cycle"`     // Whether a circular dependency exists
+	CyclePath    []int64 `db:"-" json:"cycle_path"`    // The path of the cycle if it exists
+	CommentCount int     `db:"-" json:"comment_count"` // Number of non-deleted comments
 }
