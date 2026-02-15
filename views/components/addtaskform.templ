@@ -27,6 +27,15 @@ templ AddTaskForm(status string, projectID int64) {
 				rows="2"
 				class="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
 			></textarea>
+			<div class="space-y-1">
+				<label class="block text-xs font-medium text-gray-600">Due Date (optional)</label>
+				<input
+					type="date"
+					name="due_date"
+					onfocus="if(this.showPicker){try{this.showPicker()}catch(e){}}"
+					class="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+				/>
+			</div>
 			<div class="flex gap-2">
 				<button
 					type="submit"

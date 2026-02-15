@@ -94,3 +94,12 @@
     -webkit-box-orient: vertical;
     overflow: hidden;
 }
+
+/* Date input calendar icon cursor */
+input[type="date"]::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+}
+
+input[type="date"]::-moz-calendar-picker-indicator {
+    cursor: pointer;
+}

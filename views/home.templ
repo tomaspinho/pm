@@ -147,6 +147,8 @@ templ TaskFieldUpdateResponse(taskWithDeps model.TaskWithDependencies) {
 	@components.TitleDisplay(taskWithDeps)
 	@components.DescriptionDisplay(taskWithDeps)
 	@components.AuthorDisplay(taskWithDeps)
+	@components.DueDateDisplay(taskWithDeps)
+	@components.DueDateForm(taskWithDeps)
 	<!-- Update the task card on the kanban board -->
 	<div
 		id={ "task-" + fmt.Sprintf("%d", taskWithDeps.ID) }

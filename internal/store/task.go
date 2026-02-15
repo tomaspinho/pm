@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"cracked-pm/internal/model"
 )
@@ -105,7 +106,7 @@ func (s *Store) MoveTask(ctx context.Context, taskID int64, newStatus string, ne
 }
 
 // CreateTask inserts a new task at the end of a column.
-func (s *Store) CreateTask(ctx context.Context, projectID int64, title, description, status string) (model.Task, error) {
+func (s *Store) CreateTask(ctx context.Context, projectID int64, title, description, status string, dueDate *time.Time) (model.Task, error) {
 	var task model.Task
 
 	// Get max position in the column
@@ -119,8 +120,8 @@ func (s *Store) CreateTask(ctx context.Context, projectID int64, title, descript
 
 	// Insert at max + 1
 	err = s.db.GetContext(ctx, &task,
-		"INSERT INTO tasks (project_id, title, description, status, position) VALUES ($1, $2, $3, $4, $5) RETURNING *",
-		projectID, title, description, status, maxPos+1)
+		"INSERT INTO tasks (project_id, title, description, status, position, due_date) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *",
+		projectID, title, description, status, maxPos+1, dueDate)
 	if err != nil {
 		return task, fmt.Errorf("creating task: %w", err)
 	}
@@ -176,13 +177,13 @@ func (s *Store) CountTasksByStatus(ctx context.Context, projectID int64, status 
 }
 
 // UpdateTask updates a task's basic fields.
-func (s *Store) UpdateTask(ctx context.Context, taskID int64, title, description, author string) error {
+func (s *Store) UpdateTask(ctx context.Context, taskID int64, title, description, author string, dueDate *time.Time) error {
 	query := `
 		UPDATE tasks 
-		SET title = $1, description = $2, author = $3, updated_at = NOW()
-		WHERE id = $4 AND deleted_at IS NULL
+		SET title = $1, description = $2, author = $3, due_date = $4, updated_at = NOW()
+		WHERE id = $5 AND deleted_at IS NULL
 	`
-	_, err := s.db.ExecContext(ctx, query, title, description, author, taskID)
+	_, err := s.db.ExecContext(ctx, query, title, description, author, dueDate, taskID)
 	if err != nil {
 		return fmt.Errorf("updating task %d: %w", taskID, err)
 	}

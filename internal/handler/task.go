@@ -1,7 +1,9 @@
 package handler
 
 import (
+	"fmt"
 	"strconv"
+	"time"
 
 	"cracked-pm/internal/store"
 	"cracked-pm/views"
@@ -9,6 +11,20 @@ import (
 
 	"github.com/gofiber/fiber/v3"
 )
+
+// parseDueDate parses a date string in YYYY-MM-DD format
+func parseDueDate(dateStr string) (*time.Time, error) {
+	if dateStr == "" {
+		return nil, nil
+	}
+
+	parsed, err := time.Parse("2006-01-02", dateStr)
+	if err != nil {
+		return nil, fmt.Errorf("invalid date format, expected YYYY-MM-DD: %w", err)
+	}
+
+	return &parsed, nil
+}
 
 // HandleMoveTask updates a task's status and position when it is dragged.
 // PATCH /tasks/:id/move
@@ -79,7 +95,12 @@ func (h *Handler) HandleCreateTask(c fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "status is required")
 	}
 
-	task, err := h.store.CreateTask(c.Context(), projectID, title, description, status)
+	dueDate, err := parseDueDate(c.FormValue("due_date"))
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+
+	task, err := h.store.CreateTask(c.Context(), projectID, title, description, status, dueDate)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to create task")
 	}
@@ -169,7 +190,12 @@ func (h *Handler) HandleUpdateTask(c fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "title is required")
 	}
 
-	err = h.store.UpdateTask(c.Context(), taskID, title, description, author)
+	dueDate, err := parseDueDate(c.FormValue("due_date"))
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+
+	err = h.store.UpdateTask(c.Context(), taskID, title, description, author, dueDate)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to update task")
 	}
