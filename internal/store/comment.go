@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"cracked-pm/internal/model"
+	"pm/internal/model"
 )
 
 // CreateComment creates a new comment (or reply if parentID is provided).

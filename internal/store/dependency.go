@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"cracked-pm/internal/model"
+	"pm/internal/model"
 )
 
 // AddDependency creates a dependency relationship between two tasks.

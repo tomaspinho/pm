@@ -1,4 +1,4 @@
--- Seed data for cracked-pm.
+-- Seed data for pm.
 -- Idempotent: uses ON CONFLICT to skip existing rows.
 -- Run with: mise run db:seed
 
@@ -19,7 +19,7 @@ ON CONFLICT (organization_id, user_id) DO NOTHING;
 
 -- Default project (now owned by the organization)
 INSERT INTO projects (id, name, description, organization_id)
-VALUES (1, 'My Project', 'A sample project to get started with cracked-pm', 1)
+VALUES (1, 'My Project', 'A sample project to get started with pm', 1)
 ON CONFLICT (id) DO NOTHING;
 
 -- Example tasks in different statuses

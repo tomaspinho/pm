@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"cracked-pm/internal/model"
+	"pm/internal/model"
 )
 
 func TestHasVisibleReplies(t *testing.T) {

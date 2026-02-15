@@ -3,9 +3,9 @@ package handler
 import (
 	"strconv"
 
-	"cracked-pm/internal/middleware"
-	"cracked-pm/internal/store"
-	"cracked-pm/views"
+	"pm/internal/middleware"
+	"pm/internal/store"
+	"pm/views"
 
 	"github.com/gofiber/fiber/v3"
 )

@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"cracked-pm/internal/model"
+	"pm/internal/model"
 )
 
 // ListTasksByProject returns all active (non-deleted) tasks for a project.

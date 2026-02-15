@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"cracked-pm/internal/model"
+	"pm/internal/model"
 )
 
 // CreateSession inserts a new session.

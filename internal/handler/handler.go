@@ -1,7 +1,7 @@
 package handler
 
 import (
-	"cracked-pm/internal/store"
+	"pm/internal/store"
 
 	"github.com/a-h/templ"
 	"github.com/gofiber/fiber/v3"

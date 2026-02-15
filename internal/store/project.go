@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"cracked-pm/internal/model"
+	"pm/internal/model"
 )
 
 // GetProject fetches a single project by ID.

@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"cracked-pm/internal/model"
+	"pm/internal/model"
 )
 
 // CreateOrganization creates a new organization and adds the owner as a member.

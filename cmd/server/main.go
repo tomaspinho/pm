@@ -9,11 +9,11 @@ import (
 	"syscall"
 	"time"
 
-	"cracked-pm/internal/handler"
-	"cracked-pm/internal/middleware"
-	"cracked-pm/internal/store"
-	"cracked-pm/migrations"
-	"cracked-pm/views"
+	"pm/internal/handler"
+	"pm/internal/middleware"
+	"pm/internal/store"
+	"pm/migrations"
+	"pm/views"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/logger"
@@ -56,7 +56,7 @@ func main() {
 
 	// Create Fiber app with custom error handler.
 	app := fiber.New(fiber.Config{
-		AppName: "cracked-pm",
+		AppName: "pm",
 		ErrorHandler: func(c fiber.Ctx, err error) error {
 			code := fiber.StatusInternalServerError
 			if e, ok := err.(*fiber.Error); ok {

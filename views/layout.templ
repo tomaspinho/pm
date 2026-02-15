@@ -3,7 +3,7 @@ package views
 import (
 	"fmt"
 
-	"cracked-pm/internal/model"
+	"pm/internal/model"
 )
 
 // NavContext holds data for the navigation bar. Nil means not authenticated.
@@ -19,7 +19,7 @@ templ Layout(title string) {
 		<head>
 			<meta charset="UTF-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-			<title>{ title } - cracked-pm</title>
+			<title>{ title } - pm</title>
 			<link rel="stylesheet" href="/static/css/output.css"/>
 			<script src="/static/js/htmx.min.js"></script>
 			<script src="/static/js/Sortable.min.js"></script>
@@ -27,7 +27,7 @@ templ Layout(title string) {
 		<body class="bg-gray-50 text-gray-900 min-h-screen">
 			<nav class="bg-white shadow-sm border-b border-gray-200">
 				<div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-					<a href="/" class="text-lg font-semibold text-gray-800">cracked-pm</a>
+					<a href="/" class="text-lg font-semibold text-gray-800">pm</a>
 				</div>
 			</nav>
 			<main class="max-w-7xl mx-auto px-4 py-8">
@@ -45,7 +45,7 @@ templ AuthLayout(title string, nav NavContext) {
 		<head>
 			<meta charset="UTF-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-			<title>{ title } - cracked-pm</title>
+			<title>{ title } - pm</title>
 			<link rel="stylesheet" href="/static/css/output.css"/>
 			<script src="/static/js/htmx.min.js"></script>
 			<script src="/static/js/Sortable.min.js"></script>
@@ -53,7 +53,7 @@ templ AuthLayout(title string, nav NavContext) {
 		<body class="bg-gray-50 text-gray-900 min-h-screen">
 			<nav class="bg-white shadow-sm border-b border-gray-200">
 				<div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-					<a href="/" class="text-lg font-semibold text-gray-800">cracked-pm</a>
+					<a href="/" class="text-lg font-semibold text-gray-800">pm</a>
 					<div class="flex items-center gap-4">
 						<!-- Org Picker -->
 						if len(nav.Orgs) > 0 {

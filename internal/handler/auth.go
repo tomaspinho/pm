@@ -5,8 +5,8 @@ import (
 	"strings"
 	"time"
 
-	"cracked-pm/internal/auth"
-	"cracked-pm/views"
+	"pm/internal/auth"
+	"pm/views"
 
 	"github.com/gofiber/fiber/v3"
 )

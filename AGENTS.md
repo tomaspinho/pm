@@ -1,4 +1,4 @@
-# AGENTS.md — cracked-pm
+# AGENTS.md — pm
 
 Instructions for AI coding agents operating in this repository.
 
@@ -63,7 +63,7 @@ mise run ci
 ## Project Structure
 
 ```
-cracked-pm/
+pm/
 ├── cmd/server/main.go         # Entry point: env, DB, migrations, Fiber setup
 ├── internal/
 │   ├── handler/               # HTTP handlers (one file per domain)
@@ -106,8 +106,8 @@ import (
     "log"
 
     // 2. Internal packages
-    "cracked-pm/internal/handler"
-    "cracked-pm/internal/store"
+    "pm/internal/handler"
+    "pm/internal/store"
 
     // 3. External dependencies
     "github.com/gofiber/fiber/v3"

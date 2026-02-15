@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"cracked-pm/internal/model"
+	"pm/internal/model"
 )
 
 // CreateUser inserts a new user.

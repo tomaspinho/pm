@@ -4,9 +4,9 @@ import (
 	"log"
 	"strconv"
 
-	"cracked-pm/internal/auth"
-	"cracked-pm/internal/model"
-	"cracked-pm/internal/store"
+	"pm/internal/auth"
+	"pm/internal/model"
+	"pm/internal/store"
 
 	"github.com/gofiber/fiber/v3"
 )

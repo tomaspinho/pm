@@ -4,10 +4,10 @@ import (
 	"strconv"
 	"strings"
 
-	"cracked-pm/internal/middleware"
-	"cracked-pm/internal/model"
-	"cracked-pm/internal/store"
-	"cracked-pm/views/components"
+	"pm/internal/middleware"
+	"pm/internal/model"
+	"pm/internal/store"
+	"pm/views/components"
 
 	"github.com/gofiber/fiber/v3"
 )

@@ -5,10 +5,10 @@ import (
 	"strconv"
 	"time"
 
-	"cracked-pm/internal/middleware"
-	"cracked-pm/internal/store"
-	"cracked-pm/views"
-	"cracked-pm/views/components"
+	"pm/internal/middleware"
+	"pm/internal/store"
+	"pm/views"
+	"pm/views/components"
 
 	"github.com/gofiber/fiber/v3"
 )

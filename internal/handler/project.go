@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strconv"
 
-	"cracked-pm/internal/middleware"
-	"cracked-pm/views"
+	"pm/internal/middleware"
+	"pm/views"
 
 	"github.com/gofiber/fiber/v3"
 )
