@@ -6,8 +6,8 @@ import (
 	"cracked-pm/internal/model"
 )
 
-templ ProjectPickerPage(user *model.User, orgs []model.Organization, currentOrg *model.Organization, projects []model.Project) {
-	@Layout("Projects") {
+templ ProjectPickerPage(user *model.User, orgs []model.Organization, currentOrg *model.Organization, projects []model.Project, nav NavContext) {
+	@AuthLayout("Projects", nav) {
 		<div class="space-y-6">
 			<div class="flex items-center justify-between">
 				<h1 class="text-2xl font-bold text-gray-900">Projects</h1>
@@ -77,8 +77,8 @@ templ ProjectPickerPage(user *model.User, orgs []model.Organization, currentOrg 
 	}
 }
 
-templ NewProjectPage(orgID int64) {
-	@Layout("New Project") {
+templ NewProjectPage(orgID int64, nav NavContext) {
+	@AuthLayout("New Project", nav) {
 		<div class="flex justify-center py-8">
 			<div class="w-full max-w-md">
 				<div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 space-y-6">

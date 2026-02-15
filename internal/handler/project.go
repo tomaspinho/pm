@@ -55,7 +55,12 @@ func (h *Handler) HandleProjectPicker(c fiber.Ctx) error {
 
 	if orgIDStr == "" {
 		// No orgs at all — show empty state.
-		return render(c, views.ProjectPickerPage(user, orgs, nil, nil))
+		nav := views.NavContext{
+			User:         user,
+			Orgs:         orgs,
+			CurrentOrgID: 0,
+		}
+		return render(c, views.ProjectPickerPage(user, orgs, nil, nil, nav))
 	}
 
 	orgID, err := strconv.ParseInt(orgIDStr, 10, 64)
@@ -83,7 +88,13 @@ func (h *Handler) HandleProjectPicker(c fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to load projects")
 	}
 
-	return render(c, views.ProjectPickerPage(user, orgs, currentOrg, projects))
+	nav := views.NavContext{
+		User:         user,
+		Orgs:         orgs,
+		CurrentOrgID: orgID,
+	}
+
+	return render(c, views.ProjectPickerPage(user, orgs, currentOrg, projects, nav))
 }
 
 // HandleShowCreateProject renders the new project form.
@@ -94,7 +105,23 @@ func (h *Handler) HandleShowCreateProject(c fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "invalid org_id")
 	}
 
-	return render(c, views.NewProjectPage(orgID))
+	user, err := middleware.GetCurrentUser(c)
+	if err != nil {
+		return c.Redirect().To("/login")
+	}
+
+	orgs, err := h.store.GetUserOrganizations(c.Context(), user.ID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to load organizations")
+	}
+
+	nav := views.NavContext{
+		User:         user,
+		Orgs:         orgs,
+		CurrentOrgID: orgID,
+	}
+
+	return render(c, views.NewProjectPage(orgID, nav))
 }
 
 // HandleCreateProject processes the new project form.
