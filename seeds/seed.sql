@@ -4,7 +4,7 @@
 
 -- Default user (password: changeme123)
 INSERT INTO users (id, email, password_hash)
-VALUES (1, 'admin@example.com', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy')
+VALUES (1, 'admin@example.com', '$2a$12$r61zoAW6/P0GJSm2cnx7X.2Cbv2H1J0jxkR4qZ/PMBa08p9vY/aJS')
 ON CONFLICT (id) DO NOTHING;
 
 -- Default organization for the user

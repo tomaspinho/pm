@@ -65,26 +65,8 @@ CREATE INDEX idx_projects_deleted_at ON projects(deleted_at) WHERE deleted_at IS
 ALTER TABLE users ADD CONSTRAINT fk_users_last_viewed_project
     FOREIGN KEY (last_viewed_project_id) REFERENCES projects(id) ON DELETE SET NULL;
 
--- Seed: create default user, org, and migrate existing projects
--- Password is bcrypt hash of "changeme123" (cost 10)
-INSERT INTO users (id, email, password_hash)
-VALUES (1, 'admin@example.com', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy');
-
-INSERT INTO organizations (id, name, owner_user_id)
-VALUES (1, 'admin@example.com''s Organization', 1);
-
-INSERT INTO organization_members (organization_id, user_id)
-VALUES (1, 1);
-
--- Migrate all existing projects to the default organization
-UPDATE projects SET organization_id = 1 WHERE organization_id IS NULL;
-
 -- Now make organization_id NOT NULL
 ALTER TABLE projects ALTER COLUMN organization_id SET NOT NULL;
-
--- Reset sequences
-SELECT setval('users_id_seq', (SELECT COALESCE(MAX(id), 0) FROM users));
-SELECT setval('organizations_id_seq', (SELECT COALESCE(MAX(id), 0) FROM organizations));
 
 -- +goose Down
 
