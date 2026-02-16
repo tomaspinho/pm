@@ -27,7 +27,7 @@ templ Layout(title string) {
 		<body class="bg-gray-50 text-gray-900 min-h-screen">
 			<nav class="bg-white shadow-sm border-b border-gray-200">
 				<div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-					<a href="/" class="text-lg font-semibold text-gray-800">pm</a>
+					<a href="/projects" class="text-lg font-semibold text-gray-800 cursor-pointer">pm</a>
 				</div>
 			</nav>
 			<main class="max-w-7xl mx-auto px-4 py-8">
@@ -53,7 +53,7 @@ templ AuthLayout(title string, nav NavContext) {
 		<body class="bg-gray-50 text-gray-900 min-h-screen">
 			<nav class="bg-white shadow-sm border-b border-gray-200">
 				<div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-					<a href="/" class="text-lg font-semibold text-gray-800">pm</a>
+					<a href="/projects" class="text-lg font-semibold text-gray-800 cursor-pointer">pm</a>
 					<div class="flex items-center gap-4">
 						<!-- Org Picker -->
 						if len(nav.Orgs) > 0 {
@@ -111,7 +111,7 @@ templ BoardLayout(title string, nav NavContext) {
 		<body class="bg-gray-50 text-gray-900 h-screen flex flex-col overflow-hidden">
 			<nav class="bg-white shadow-sm border-b border-gray-200 flex-shrink-0">
 				<div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-					<a href="/" class="text-lg font-semibold text-gray-800">pm</a>
+					<a href="/projects" class="text-lg font-semibold text-gray-800 cursor-pointer">pm</a>
 					<div class="flex items-center gap-4">
 						<!-- Org Picker -->
 						if len(nav.Orgs) > 0 {
