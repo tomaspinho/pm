@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"pm/internal/middleware"
+	"pm/internal/model"
 	"pm/views"
 
 	"github.com/gofiber/fiber/v3"
@@ -144,11 +145,131 @@ func (h *Handler) HandleCreateProject(c fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to create project")
 	}
 
-	// Create default columns for the project.
-	err = h.store.CreateDefaultColumns(c.Context(), project.ID)
+	// Redirect to column setup page instead of creating default columns automatically.
+	return c.Redirect().To(fmt.Sprintf("/orgs/%d/projects/%d/columns/setup", orgID, project.ID))
+}
+
+// HandleShowColumnSetup renders the column setup page for a new project.
+// GET /orgs/:org_id/projects/:project_id/columns/setup
+func (h *Handler) HandleShowColumnSetup(c fiber.Ctx) error {
+	orgID, err := strconv.ParseInt(c.Params("org_id"), 10, 64)
 	if err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, "failed to create default columns")
+		return fiber.NewError(fiber.StatusBadRequest, "invalid org_id")
 	}
 
-	return c.Redirect().To(fmt.Sprintf("/orgs/%d/projects/%d", orgID, project.ID))
+	projectID, err := strconv.ParseInt(c.Params("project_id"), 10, 64)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "invalid project_id")
+	}
+
+	user, err := middleware.GetCurrentUser(c)
+	if err != nil {
+		return c.Redirect().To("/login")
+	}
+
+	// Load project to display name.
+	project, err := h.store.GetProject(c.Context(), projectID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusNotFound, "project not found")
+	}
+
+	// Check if columns already exist.
+	existingColumns, err := h.store.GetProjectColumns(c.Context(), projectID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to load columns")
+	}
+
+	// Get user's organizations for nav.
+	orgs, err := h.store.GetUserOrganizations(c.Context(), user.ID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to load organizations")
+	}
+
+	nav := views.NavContext{
+		User:         user,
+		Orgs:         orgs,
+		CurrentOrgID: orgID,
+	}
+
+	return render(c, views.ColumnSetupPage(project, orgID, existingColumns, nav))
+}
+
+// HandleSaveColumnSetup processes the column setup form.
+// POST /orgs/:org_id/projects/:project_id/columns/setup
+func (h *Handler) HandleSaveColumnSetup(c fiber.Ctx) error {
+	orgID, err := strconv.ParseInt(c.Params("org_id"), 10, 64)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "invalid org_id")
+	}
+
+	projectID, err := strconv.ParseInt(c.Params("project_id"), 10, 64)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "invalid project_id")
+	}
+
+	// Parse form data - columns come as indexed form values.
+	// Expected format: columns[0][name], columns[0][color], columns[1][name], etc.
+
+	// Build columns from form data.
+	var columns []struct {
+		Name  string
+		Color string
+		Pos   int
+	}
+
+	// Parse columns from form values.
+	for i := 0; ; i++ {
+		nameKey := fmt.Sprintf("columns[%d][name]", i)
+		colorKey := fmt.Sprintf("columns[%d][color]", i)
+
+		name := c.FormValue(nameKey)
+		color := c.FormValue(colorKey)
+
+		if name == "" {
+			break // No more columns.
+		}
+
+		columns = append(columns, struct {
+			Name  string
+			Color string
+			Pos   int
+		}{
+			Name:  name,
+			Color: color,
+			Pos:   i,
+		})
+	}
+
+	// Validate: at least 1 column required.
+	if len(columns) == 0 {
+		return fiber.NewError(fiber.StatusBadRequest, "at least one column is required")
+	}
+
+	// Validate: no duplicate names.
+	nameSet := make(map[string]bool)
+	for _, col := range columns {
+		if nameSet[col.Name] {
+			return fiber.NewError(fiber.StatusBadRequest, fmt.Sprintf("duplicate column name: %s", col.Name))
+		}
+		nameSet[col.Name] = true
+	}
+
+	// Convert to model.ProjectColumn slice.
+	var modelColumns []model.ProjectColumn
+	for _, col := range columns {
+		modelColumns = append(modelColumns, model.ProjectColumn{
+			Name:     col.Name,
+			Color:    col.Color,
+			Position: col.Pos,
+		})
+	}
+
+	// Create columns in database.
+	err = h.store.CreateProjectColumns(c.Context(), projectID, modelColumns)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to create columns")
+	}
+
+	// Redirect to the project board.
+	return c.Redirect().To(fmt.Sprintf("/orgs/%d/projects/%d", orgID, projectID))
 }

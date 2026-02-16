@@ -100,6 +100,10 @@ func main() {
 	org.Get("/projects/new", h.HandleShowCreateProject)
 	org.Post("/projects", h.HandleCreateProject)
 
+	// Column setup.
+	org.Get("/projects/:project_id/columns/setup", h.HandleShowColumnSetup)
+	org.Post("/projects/:project_id/columns/setup", h.HandleSaveColumnSetup)
+
 	// Board view.
 	org.Get("/projects/:project_id", h.HandleBoard)
 

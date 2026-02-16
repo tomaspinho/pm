@@ -22,8 +22,17 @@ INSERT INTO projects (id, name, description, organization_id)
 VALUES (1, 'My Project', 'A sample project to get started with pm', 1)
 ON CONFLICT (id) DO NOTHING;
 
+-- Default columns for the sample project
+-- Note: Using specific IDs (1, 2, 3) so tasks can reference them
+INSERT INTO project_columns (id, project_id, name, color, position)
+VALUES
+    (1, 1, 'To Do', '#6B7280', 0),
+    (2, 1, 'In Progress', '#3B82F6', 1),
+    (3, 1, 'Done', '#10B981', 2)
+ON CONFLICT (id) DO NOTHING;
+
 -- Example tasks in different columns
--- Note: column_id 1 = To Do, 2 = In Progress, 3 = Done (from default columns migration)
+-- Note: column_id 1 = To Do, 2 = In Progress, 3 = Done (from columns above)
 INSERT INTO tasks (id, project_id, title, description, column_id, position, author, metadata)
 VALUES
     (1, 1, 'Set up CI pipeline',         'Configure GitHub Actions for build, lint, and test.',    1, 0, 'alice@example.com', '{"priority": "high", "labels": ["devops", "infrastructure"]}'),
@@ -42,4 +51,5 @@ ON CONFLICT (task_id, depends_on_id) DO NOTHING;
 SELECT setval('users_id_seq', (SELECT COALESCE(MAX(id), 0) FROM users));
 SELECT setval('organizations_id_seq', (SELECT COALESCE(MAX(id), 0) FROM organizations));
 SELECT setval('projects_id_seq', (SELECT COALESCE(MAX(id), 0) FROM projects));
-SELECT setval('tasks_id_seq',    (SELECT COALESCE(MAX(id), 0) FROM tasks));
+SELECT setval('project_columns_id_seq', (SELECT COALESCE(MAX(id), 0) FROM project_columns));
+SELECT setval('tasks_id_seq', (SELECT COALESCE(MAX(id), 1) FROM tasks));
