@@ -5,7 +5,7 @@ import "fmt"
 templ AddTaskButton(columnID int64, orgID int64, projectID int64) {
 	<button
 		type="button"
-		class="w-full text-left px-3 py-2 text-sm text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+		class="w-full text-left px-3 py-2 text-sm text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
 		hx-get={ fmt.Sprintf("/orgs/%d/projects/%d/tasks/new-form?columnID=%d", orgID, projectID, columnID) }
 		hx-target={ fmt.Sprintf("#add-form-%d", columnID) }
 		hx-swap="innerHTML"
