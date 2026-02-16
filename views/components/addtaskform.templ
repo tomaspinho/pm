@@ -39,13 +39,13 @@ templ AddTaskForm(columnID int64, orgID int64, projectID int64) {
 			<div class="flex gap-2">
 				<button
 					type="submit"
-					class="px-3 py-1.5 text-sm font-medium text-white bg-blue-600 rounded hover:bg-blue-700 transition-colors"
+					class="px-3 py-1.5 text-sm font-medium text-white bg-blue-600 rounded hover:bg-blue-700 transition-colors cursor-pointer"
 				>
 					Add Task
 				</button>
 				<button
 					type="button"
-					class="px-3 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 rounded hover:bg-gray-200 transition-colors"
+					class="px-3 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 rounded hover:bg-gray-200 transition-colors cursor-pointer"
 					hx-get={ fmt.Sprintf("/orgs/%d/projects/%d/tasks/cancel-form?columnID=%d", orgID, projectID, columnID) }
 					hx-target={ fmt.Sprintf("#add-form-%d", columnID) }
 					hx-swap="innerHTML"
