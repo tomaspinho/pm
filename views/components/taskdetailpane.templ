@@ -350,45 +350,45 @@ templ TaskDetailPane(taskWithDeps model.TaskWithDependencies, orgID int64, proje
 						</form>
 					</div>
 				</div>
-				<!-- Status -->
-				<div class="space-y-2">
-					<label class="block text-xs font-medium text-gray-500 uppercase tracking-wide">Status</label>
-					<div class="relative" id={ "status-badge-" + fmt.Sprintf("%d", taskWithDeps.ID) }>
-						<!-- Clickable Status Badge -->
-						<button
-							type="button"
-							class="inline-flex items-center gap-2 px-3 py-1 text-sm font-medium rounded-full bg-indigo-100 text-indigo-800 hover:bg-indigo-200 transition-colors cursor-pointer"
-							onclick={ toggleStatusDropdown(fmt.Sprintf("%d", taskWithDeps.ID)) }
-						>
-							<span>{ model.StatusLabel(taskWithDeps.Status) }</span>
-							<!-- Dropdown chevron icon -->
-							<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-							</svg>
-						</button>
-						<!-- Dropdown Menu (hidden by default) -->
-						<div
-							id={ "status-dropdown-" + fmt.Sprintf("%d", taskWithDeps.ID) }
-							class="hidden absolute top-full mt-2 left-0 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20 min-w-[150px]"
-						>
-							for _, status := range model.AllStatuses() {
-								<button
-									type="button"
-									class={ "w-full text-left px-4 py-2 text-sm hover:bg-gray-100 transition-colors flex items-center justify-between", templ.KV("font-semibold text-indigo-800", status == taskWithDeps.Status), templ.KV("text-gray-700", status != taskWithDeps.Status) }
-									hx-patch={ taskURLPrefix(orgID, taskWithDeps.ProjectID) + "/" + fmt.Sprintf("%d", taskWithDeps.ID) + "/status" }
-									hx-vals={ fmt.Sprintf(`{"status": "%s"}`, status) }
-									hx-target="body"
-									hx-swap="none"
-								>
-									<span>{ model.StatusLabel(status) }</span>
-									if status == taskWithDeps.Status {
-										<span>✓</span>
-									}
-								</button>
-							}
-						</div>
-					</div>
-				</div>
+// TEMPORARILY COMMENTED: 				<!-- Status -->
+// TEMPORARILY COMMENTED: 				<div class="space-y-2">
+// TEMPORARILY COMMENTED: 					<label class="block text-xs font-medium text-gray-500 uppercase tracking-wide">Status</label>
+// TEMPORARILY COMMENTED: 					<div class="relative" id={ "status-badge-" + fmt.Sprintf("%d", taskWithDeps.ID) }>
+// TEMPORARILY COMMENTED: 						<!-- Clickable Status Badge -->
+// TEMPORARILY COMMENTED: 						<button
+// TEMPORARILY COMMENTED: 							type="button"
+// TEMPORARILY COMMENTED: 							class="inline-flex items-center gap-2 px-3 py-1 text-sm font-medium rounded-full bg-indigo-100 text-indigo-800 hover:bg-indigo-200 transition-colors cursor-pointer"
+// TEMPORARILY COMMENTED: 							onclick={ toggleStatusDropdown(fmt.Sprintf("%d", taskWithDeps.ID)) }
+// TEMPORARILY COMMENTED: 						>
+// TEMPORARILY COMMENTED: 							<span>{ model.StatusLabel(taskWithDeps.Status) }</span>
+// TEMPORARILY COMMENTED: 							<!-- Dropdown chevron icon -->
+// TEMPORARILY COMMENTED: 							<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+// TEMPORARILY COMMENTED: 								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+// TEMPORARILY COMMENTED: 							</svg>
+// TEMPORARILY COMMENTED: 						</button>
+// TEMPORARILY COMMENTED: 						<!-- Dropdown Menu (hidden by default) -->
+// TEMPORARILY COMMENTED: 						<div
+// TEMPORARILY COMMENTED: 							id={ "status-dropdown-" + fmt.Sprintf("%d", taskWithDeps.ID) }
+// TEMPORARILY COMMENTED: 							class="hidden absolute top-full mt-2 left-0 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20 min-w-[150px]"
+// TEMPORARILY COMMENTED: 						>
+// TEMPORARILY COMMENTED: 							for _, status := range model.AllStatuses() {
+// TEMPORARILY COMMENTED: 								<button
+// TEMPORARILY COMMENTED: 									type="button"
+// TEMPORARILY COMMENTED: 									class={ "w-full text-left px-4 py-2 text-sm hover:bg-gray-100 transition-colors flex items-center justify-between", templ.KV("font-semibold text-indigo-800", status == taskWithDeps.Status), templ.KV("text-gray-700", status != taskWithDeps.Status) }
+// TEMPORARILY COMMENTED: 									hx-patch={ taskURLPrefix(orgID, taskWithDeps.ProjectID) + "/" + fmt.Sprintf("%d", taskWithDeps.ID) + "/status" }
+// TEMPORARILY COMMENTED: 									hx-vals={ fmt.Sprintf(`{"status": "%s"}`, status) }
+// TEMPORARILY COMMENTED: 									hx-target="body"
+// TEMPORARILY COMMENTED: 									hx-swap="none"
+// TEMPORARILY COMMENTED: 								>
+// TEMPORARILY COMMENTED: 									<span>{ model.StatusLabel(status) }</span>
+// TEMPORARILY COMMENTED: 									if status == taskWithDeps.Status {
+// TEMPORARILY COMMENTED: 										<span>✓</span>
+// TEMPORARILY COMMENTED: 									}
+// TEMPORARILY COMMENTED: 								</button>
+// TEMPORARILY COMMENTED: 							}
+// TEMPORARILY COMMENTED: 						</div>
+// TEMPORARILY COMMENTED: 					</div>
+// TEMPORARILY COMMENTED: 				</div>
 				<!-- Dependencies Section -->
 				<div id={ "dependency-section-" + fmt.Sprintf("%d", taskWithDeps.ID) }>
 					@DependencySection(taskWithDeps, orgID)
@@ -428,7 +428,7 @@ templ DependencySection(taskWithDeps model.TaskWithDependencies, orgID int64) {
 								hx-swap="outerHTML"
 							>
 								<span class="text-sm text-gray-900">{ dep.Title }</span>
-								<span class="text-xs text-gray-500 ml-2">({ model.StatusLabel(dep.Status) })</span>
+								<span class="text-xs text-gray-500 ml-2">({ fmt.Sprintf("Column %d", dep.ColumnID) })</span>
 							</button>
 							<button
 								type="button"
@@ -462,7 +462,7 @@ templ DependencySection(taskWithDeps model.TaskWithDependencies, orgID int64) {
 							hx-swap="outerHTML"
 						>
 							<span class="text-sm text-gray-900">{ dep.Title }</span>
-							<span class="text-xs text-gray-500 ml-2">({ model.StatusLabel(dep.Status) })</span>
+							<span class="text-xs text-gray-500 ml-2">({ fmt.Sprintf("Column %d", dep.ColumnID) })</span>
 						</button>
 					}
 				</div>
@@ -833,44 +833,44 @@ templ AuthorDisplay(taskWithDeps model.TaskWithDependencies, orgID int64) {
 	></div>
 }
 
-// StatusBadge renders just the status badge for OOB swaps (within status section)
-templ StatusBadge(taskWithDeps model.TaskWithDependencies, orgID int64) {
-	<div class="relative" id={ "status-badge-" + fmt.Sprintf("%d", taskWithDeps.ID) } hx-swap-oob="true">
-		<!-- Clickable Status Badge -->
-		<button
-			type="button"
-			class="inline-flex items-center gap-2 px-3 py-1 text-sm font-medium rounded-full bg-indigo-100 text-indigo-800 hover:bg-indigo-200 transition-colors cursor-pointer"
-			onclick={ toggleStatusDropdown(fmt.Sprintf("%d", taskWithDeps.ID)) }
-		>
-			<span>{ model.StatusLabel(taskWithDeps.Status) }</span>
-			<!-- Dropdown chevron icon -->
-			<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-			</svg>
-		</button>
-		<!-- Dropdown Menu (hidden by default) -->
-		<div
-			id={ "status-dropdown-" + fmt.Sprintf("%d", taskWithDeps.ID) }
-			class="hidden absolute top-full mt-2 left-0 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20 min-w-[150px]"
-		>
-			for _, status := range model.AllStatuses() {
-				<button
-					type="button"
-					class={ "w-full text-left px-4 py-2 text-sm hover:bg-gray-100 transition-colors flex items-center justify-between", templ.KV("font-semibold text-indigo-800", status == taskWithDeps.Status), templ.KV("text-gray-700", status != taskWithDeps.Status) }
-					hx-patch={ taskURLPrefix(orgID, taskWithDeps.ProjectID) + "/" + fmt.Sprintf("%d", taskWithDeps.ID) + "/status" }
-					hx-vals={ fmt.Sprintf(`{"status": "%s"}`, status) }
-					hx-target="body"
-					hx-swap="none"
-				>
-					<span>{ model.StatusLabel(status) }</span>
-					if status == taskWithDeps.Status {
-						<span>✓</span>
-					}
-				</button>
-			}
-		</div>
-	</div>
-}
+// TEMPORARILY COMMENTED: // StatusBadge renders just the status badge for OOB swaps (within status section)
+// TEMPORARILY COMMENTED: templ StatusBadge(taskWithDeps model.TaskWithDependencies, orgID int64) {
+// TEMPORARILY COMMENTED: 	<div class="relative" id={ "status-badge-" + fmt.Sprintf("%d", taskWithDeps.ID) } hx-swap-oob="true">
+// TEMPORARILY COMMENTED: 		<!-- Clickable Status Badge -->
+// TEMPORARILY COMMENTED: 		<button
+// TEMPORARILY COMMENTED: 			type="button"
+// TEMPORARILY COMMENTED: 			class="inline-flex items-center gap-2 px-3 py-1 text-sm font-medium rounded-full bg-indigo-100 text-indigo-800 hover:bg-indigo-200 transition-colors cursor-pointer"
+// TEMPORARILY COMMENTED: 			onclick={ toggleStatusDropdown(fmt.Sprintf("%d", taskWithDeps.ID)) }
+// TEMPORARILY COMMENTED: 		>
+// TEMPORARILY COMMENTED: 			<span>{ model.StatusLabel(taskWithDeps.Status) }</span>
+// TEMPORARILY COMMENTED: 			<!-- Dropdown chevron icon -->
+// TEMPORARILY COMMENTED: 			<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+// TEMPORARILY COMMENTED: 				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+// TEMPORARILY COMMENTED: 			</svg>
+// TEMPORARILY COMMENTED: 		</button>
+// TEMPORARILY COMMENTED: 		<!-- Dropdown Menu (hidden by default) -->
+// TEMPORARILY COMMENTED: 		<div
+// TEMPORARILY COMMENTED: 			id={ "status-dropdown-" + fmt.Sprintf("%d", taskWithDeps.ID) }
+// TEMPORARILY COMMENTED: 			class="hidden absolute top-full mt-2 left-0 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20 min-w-[150px]"
+// TEMPORARILY COMMENTED: 		>
+// TEMPORARILY COMMENTED: 			for _, status := range model.AllStatuses() {
+// TEMPORARILY COMMENTED: 				<button
+// TEMPORARILY COMMENTED: 					type="button"
+// TEMPORARILY COMMENTED: 					class={ "w-full text-left px-4 py-2 text-sm hover:bg-gray-100 transition-colors flex items-center justify-between", templ.KV("font-semibold text-indigo-800", status == taskWithDeps.Status), templ.KV("text-gray-700", status != taskWithDeps.Status) }
+// TEMPORARILY COMMENTED: 					hx-patch={ taskURLPrefix(orgID, taskWithDeps.ProjectID) + "/" + fmt.Sprintf("%d", taskWithDeps.ID) + "/status" }
+// TEMPORARILY COMMENTED: 					hx-vals={ fmt.Sprintf(`{"status": "%s"}`, status) }
+// TEMPORARILY COMMENTED: 					hx-target="body"
+// TEMPORARILY COMMENTED: 					hx-swap="none"
+// TEMPORARILY COMMENTED: 				>
+// TEMPORARILY COMMENTED: 					<span>{ model.StatusLabel(status) }</span>
+// TEMPORARILY COMMENTED: 					if status == taskWithDeps.Status {
+// TEMPORARILY COMMENTED: 						<span>✓</span>
+// TEMPORARILY COMMENTED: 					}
+// TEMPORARILY COMMENTED: 				</button>
+// TEMPORARILY COMMENTED: 			}
+// TEMPORARILY COMMENTED: 		</div>
+// TEMPORARILY COMMENTED: 	</div>
+// TEMPORARILY COMMENTED: }
 
 // MetadataItem renders a single metadata key-value pair with inline editing
 templ MetadataItem(taskID int64, orgID int64, projectID int64, key string, value interface{}) {

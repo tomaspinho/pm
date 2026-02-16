@@ -2,16 +2,16 @@ package components
 
 import "fmt"
 
-templ AddTaskForm(status string, orgID int64, projectID int64) {
+templ AddTaskForm(columnID int64, orgID int64, projectID int64) {
 	<form
 		class="bg-white rounded-lg border border-gray-200 p-3 shadow-sm"
 		hx-post={ fmt.Sprintf("/orgs/%d/projects/%d/tasks", orgID, projectID) }
-		hx-target={ "#task-list-" + status }
+		hx-target={ fmt.Sprintf("#task-list-%d", columnID) }
 		hx-swap="beforeend"
 		hx-disabled-elt="find button[type='submit']"
 	>
 		<input type="hidden" name="project_id" value={ intToStr(projectID) }/>
-		<input type="hidden" name="status" value={ status }/>
+		<input type="hidden" name="columnID" value={ intToStr(columnID) }/>
 		<div class="space-y-2">
 			<input
 				type="text"
@@ -46,8 +46,8 @@ templ AddTaskForm(status string, orgID int64, projectID int64) {
 				<button
 					type="button"
 					class="px-3 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 rounded hover:bg-gray-200 transition-colors"
-					hx-get={ fmt.Sprintf("/orgs/%d/projects/%d/tasks/cancel-form?status=%s", orgID, projectID, status) }
-					hx-target={ "#add-form-" + status }
+					hx-get={ fmt.Sprintf("/orgs/%d/projects/%d/tasks/cancel-form?columnID=%d", orgID, projectID, columnID) }
+					hx-target={ fmt.Sprintf("#add-form-%d", columnID) }
 					hx-swap="innerHTML"
 				>
 					Cancel

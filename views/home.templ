@@ -2,12 +2,13 @@ package views
 
 import (
 	"fmt"
+	"strconv"
 
 	"pm/internal/model"
 	"pm/views/components"
 )
 
-templ BoardPage(project model.Project, tasksByStatus map[string][]model.Task, nav NavContext) {
+templ BoardPage(project model.Project, columns []model.ProjectColumn, tasksByColumn map[int64][]model.Task, nav NavContext) {
 	@AuthLayout(project.Name, nav) {
 		<div class="space-y-6">
 			<div>
@@ -16,9 +17,13 @@ templ BoardPage(project model.Project, tasksByStatus map[string][]model.Task, na
 					<p class="mt-1 text-gray-500">{ project.Description }</p>
 				}
 			</div>
-			<div id="kanban-board" class="grid grid-cols-3 gap-6">
-				for _, status := range model.AllStatuses() {
-					@Column(status, project, tasksByStatus[status])
+			<div 
+				id="kanban-board" 
+				class="grid gap-6"
+				style={ templ.SafeCSS(fmt.Sprintf("grid-template-columns: repeat(%d, minmax(300px, 1fr))", len(columns))) }
+			>
+				for _, column := range columns {
+					@Column(column, project, tasksByColumn[column.ID])
 				}
 			</div>
 		</div>
@@ -26,30 +31,34 @@ templ BoardPage(project model.Project, tasksByStatus map[string][]model.Task, na
 	}
 }
 
-templ Column(status string, project model.Project, tasks []model.Task) {
+templ Column(column model.ProjectColumn, project model.Project, tasks []model.Task) {
 	<div class="flex flex-col">
 		<div class="flex items-center gap-2 mb-3">
+			<div 
+				class="w-3 h-3 rounded-full shrink-0" 
+				style={ templ.SafeCSS(fmt.Sprintf("background-color: %s", column.Color)) }
+			></div>
 			<h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">
-				{ model.StatusLabel(status) }
+				{ column.Name }
 			</h2>
 			<span
-				id={ "count-" + status }
+				id={ fmt.Sprintf("count-%d", column.ID) }
 				class="text-xs text-gray-400 bg-gray-100 rounded-full px-2 py-0.5"
 			>
 				{ intToStr(len(tasks)) }
 			</span>
 		</div>
 		<div
-			id={ "task-list-" + status }
+			id={ fmt.Sprintf("task-list-%d", column.ID) }
 			class="sortable-column flex flex-col gap-2 min-h-[120px] p-2 rounded-lg bg-gray-100/50 border border-transparent transition-all duration-200"
-			data-status={ status }
+			data-column-id={ fmt.Sprintf("%d", column.ID) }
 		>
 			for _, task := range tasks {
 				@components.TaskCard(task, project.OrganizationID)
 			}
 		</div>
-		<div id={ "add-form-" + status } class="mt-2">
-			@components.AddTaskButton(status, project.OrganizationID, project.ID)
+		<div id={ fmt.Sprintf("add-form-%d", column.ID) } class="mt-2">
+			@components.AddTaskButton(column.ID, project.OrganizationID, project.ID)
 		</div>
 	</div>
 }
@@ -85,12 +94,12 @@ templ kanbanScript(orgID int64, projectID int64) {
 						});
 
 						var taskId = evt.item.dataset.id;
-						var newStatus = evt.to.dataset.status;
+						var newColumnID = evt.to.dataset.columnId;
 						var newPosition = evt.newIndex;
 
 						htmx.ajax("PATCH", "/orgs/" + orgID + "/projects/" + projectID + "/tasks/" + taskId + "/move", {
 							values: {
-								status: newStatus,
+								columnID: newColumnID,
 								position: newPosition
 							},
 							swap: "none"
@@ -111,21 +120,21 @@ func intToStr(n int) string {
 }
 
 // NewTaskResponse returns the new task card plus out-of-band updates.
-templ NewTaskResponse(task model.Task, orgID int64, status string, count int) {
+templ NewTaskResponse(task model.Task, orgID int64, columnID int64, count int) {
 	@components.TaskCard(task, orgID)
 	<!-- Out-of-band: update count -->
-	<span id={ "count-" + status } hx-swap-oob="true" class="text-xs text-gray-400 bg-gray-100 rounded-full px-2 py-0.5">
+	<span id={ fmt.Sprintf("count-%d", columnID) } hx-swap-oob="true" class="text-xs text-gray-400 bg-gray-100 rounded-full px-2 py-0.5">
 		{ intToStr(count) }
 	</span>
 	<!-- Out-of-band: reset form to button -->
-	<div id={ "add-form-" + status } hx-swap-oob="true" class="mt-2">
-		@components.AddTaskButton(status, orgID, task.ProjectID)
+	<div id={ fmt.Sprintf("add-form-%d", columnID) } hx-swap-oob="true" class="mt-2">
+		@components.AddTaskButton(columnID, orgID, task.ProjectID)
 	</div>
 }
 
 // DeleteTaskResponse returns out-of-band count update after deletion.
-templ DeleteTaskResponse(status string, count int) {
-	<span id={ "count-" + status } hx-swap-oob="true" class="text-xs text-gray-400 bg-gray-100 rounded-full px-2 py-0.5">
+templ DeleteTaskResponse(columnID int64, count int) {
+	<span id={ fmt.Sprintf("count-%d", columnID) } hx-swap-oob="true" class="text-xs text-gray-400 bg-gray-100 rounded-full px-2 py-0.5">
 		{ intToStr(count) }
 	</span>
 }
@@ -161,48 +170,48 @@ templ TaskFieldUpdateResponse(taskWithDeps model.TaskWithDependencies, orgID int
 	</div>
 }
 
-// StatusUpdateResponse returns OOB updates for status badge and kanban columns (no full pane reload).
-templ StatusUpdateResponse(taskWithDeps model.TaskWithDependencies, orgID int64, oldStatus string, tasksByStatus map[string][]model.Task) {
-	<!-- Update status badge -->
-	@components.StatusBadge(taskWithDeps, orgID)
-	if oldStatus != taskWithDeps.Status {
-		<!-- Out-of-band: update old status column task list -->
+// ColumnUpdateResponse returns OOB updates for column badge and kanban columns (no full pane reload).
+templ ColumnUpdateResponse(taskWithDeps model.TaskWithDependencies, orgID int64, oldColumnID int64, tasksByColumn map[int64][]model.Task, columns []model.ProjectColumn) {
+	<!-- Update column badge -->
+	@components.ColumnBadge(taskWithDeps, orgID, columns)
+	if oldColumnID != taskWithDeps.ColumnID {
+		<!-- Out-of-band: update old column task list -->
 		<div
-			id={ "task-list-" + oldStatus }
+			id={ fmt.Sprintf("task-list-%d", oldColumnID) }
 			class="sortable-column flex flex-col gap-2 min-h-[120px] p-2 rounded-lg bg-gray-100/50 border border-transparent transition-all duration-200"
-			data-status={ oldStatus }
+			data-column-id={ strconv.FormatInt(oldColumnID, 10) }
 			hx-swap-oob="true"
 		>
-			for _, task := range tasksByStatus[oldStatus] {
+			for _, task := range tasksByColumn[oldColumnID] {
 				@components.TaskCard(task, orgID)
 			}
 		</div>
-		<!-- Out-of-band: update old status count -->
+		<!-- Out-of-band: update old column count -->
 		<span
-			id={ "count-" + oldStatus }
+			id={ fmt.Sprintf("count-%d", oldColumnID) }
 			class="text-xs text-gray-400 bg-gray-100 rounded-full px-2 py-0.5"
 			hx-swap-oob="true"
 		>
-			{ intToStr(len(tasksByStatus[oldStatus])) }
+			{ intToStr(len(tasksByColumn[oldColumnID])) }
 		</span>
 	}
-	<!-- Out-of-band: update new status column task list -->
+	<!-- Out-of-band: update new column task list -->
 	<div
-		id={ "task-list-" + taskWithDeps.Status }
+		id={ fmt.Sprintf("task-list-%d", taskWithDeps.ColumnID) }
 		class="sortable-column flex flex-col gap-2 min-h-[120px] p-2 rounded-lg bg-gray-100/50 border border-transparent transition-all duration-200"
-		data-status={ taskWithDeps.Status }
+		data-column-id={ strconv.FormatInt(taskWithDeps.ColumnID, 10) }
 		hx-swap-oob="true"
 	>
-		for _, task := range tasksByStatus[taskWithDeps.Status] {
+		for _, task := range tasksByColumn[taskWithDeps.ColumnID] {
 			@components.TaskCard(task, orgID)
 		}
 	</div>
-	<!-- Out-of-band: update new status count -->
+	<!-- Out-of-band: update new column count -->
 	<span
-		id={ "count-" + taskWithDeps.Status }
+		id={ fmt.Sprintf("count-%d", taskWithDeps.ColumnID) }
 		class="text-xs text-gray-400 bg-gray-100 rounded-full px-2 py-0.5"
 		hx-swap-oob="true"
 	>
-		{ intToStr(len(tasksByStatus[taskWithDeps.Status])) }
+		{ intToStr(len(tasksByColumn[taskWithDeps.ColumnID])) }
 	</span>
 }

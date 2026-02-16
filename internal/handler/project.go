@@ -144,5 +144,11 @@ func (h *Handler) HandleCreateProject(c fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to create project")
 	}
 
+	// Create default columns for the project.
+	err = h.store.CreateDefaultColumns(c.Context(), project.ID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to create default columns")
+	}
+
 	return c.Redirect().To(fmt.Sprintf("/orgs/%d/projects/%d", orgID, project.ID))
 }

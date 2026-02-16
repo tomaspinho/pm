@@ -35,20 +35,20 @@ func (s *Store) GetTask(ctx context.Context, taskID int64) (*model.Task, error) 
 	return &task, nil
 }
 
-// GroupTasksByStatus groups a slice of tasks into a map keyed by status.
-func GroupTasksByStatus(tasks []model.Task) map[string][]model.Task {
-	grouped := make(map[string][]model.Task)
-	for _, s := range model.AllStatuses() {
-		grouped[s] = []model.Task{}
+// GroupTasksByColumn groups a slice of tasks into a map keyed by column ID.
+func GroupTasksByColumn(tasks []model.Task, columns []model.ProjectColumn) map[int64][]model.Task {
+	grouped := make(map[int64][]model.Task)
+	for _, col := range columns {
+		grouped[col.ID] = []model.Task{}
 	}
 	for _, t := range tasks {
-		grouped[t.Status] = append(grouped[t.Status], t)
+		grouped[t.ColumnID] = append(grouped[t.ColumnID], t)
 	}
 	return grouped
 }
 
-// MoveTask updates a task's status and position, shifting other tasks as needed.
-func (s *Store) MoveTask(ctx context.Context, taskID int64, newStatus string, newPosition int) error {
+// MoveTask updates a task's column and position, shifting other tasks as needed.
+func (s *Store) MoveTask(ctx context.Context, taskID int64, newColumnID int64, newPosition int) error {
 	tx, err := s.db.BeginTxx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("beginning transaction: %w", err)
@@ -62,10 +62,10 @@ func (s *Store) MoveTask(ctx context.Context, taskID int64, newStatus string, ne
 	}
 
 	// If moving to a different column, close the gap in the old column first
-	if task.Status != newStatus {
+	if task.ColumnID != newColumnID {
 		_, err := tx.ExecContext(ctx,
-			"UPDATE tasks SET position = position - 1, updated_at = now() WHERE project_id = $1 AND status = $2 AND position > $3 AND deleted_at IS NULL",
-			task.ProjectID, task.Status, task.Position,
+			"UPDATE tasks SET position = position - 1, updated_at = now() WHERE project_id = $1 AND column_id = $2 AND position > $3 AND deleted_at IS NULL",
+			task.ProjectID, task.ColumnID, task.Position,
 		)
 		if err != nil {
 			return fmt.Errorf("closing gap in old column: %w", err)
@@ -73,8 +73,8 @@ func (s *Store) MoveTask(ctx context.Context, taskID int64, newStatus string, ne
 	} else {
 		// Same column: close the gap at the old position
 		_, err := tx.ExecContext(ctx,
-			"UPDATE tasks SET position = position - 1, updated_at = now() WHERE project_id = $1 AND status = $2 AND position > $3 AND id != $4 AND deleted_at IS NULL",
-			task.ProjectID, task.Status, task.Position, taskID,
+			"UPDATE tasks SET position = position - 1, updated_at = now() WHERE project_id = $1 AND column_id = $2 AND position > $3 AND id != $4 AND deleted_at IS NULL",
+			task.ProjectID, task.ColumnID, task.Position, taskID,
 		)
 		if err != nil {
 			return fmt.Errorf("closing gap in same column: %w", err)
@@ -83,8 +83,8 @@ func (s *Store) MoveTask(ctx context.Context, taskID int64, newStatus string, ne
 
 	// Open a gap at the new position in the target column
 	_, err = tx.ExecContext(ctx,
-		"UPDATE tasks SET position = position + 1, updated_at = now() WHERE project_id = $1 AND status = $2 AND position >= $3 AND id != $4 AND deleted_at IS NULL",
-		task.ProjectID, newStatus, newPosition, taskID,
+		"UPDATE tasks SET position = position + 1, updated_at = now() WHERE project_id = $1 AND column_id = $2 AND position >= $3 AND id != $4 AND deleted_at IS NULL",
+		task.ProjectID, newColumnID, newPosition, taskID,
 	)
 	if err != nil {
 		return fmt.Errorf("opening gap in target column: %w", err)
@@ -92,8 +92,8 @@ func (s *Store) MoveTask(ctx context.Context, taskID int64, newStatus string, ne
 
 	// Move the task
 	_, err = tx.ExecContext(ctx,
-		"UPDATE tasks SET status = $1, position = $2, updated_at = now() WHERE id = $3",
-		newStatus, newPosition, taskID,
+		"UPDATE tasks SET column_id = $1, position = $2, updated_at = now() WHERE id = $3",
+		newColumnID, newPosition, taskID,
 	)
 	if err != nil {
 		return fmt.Errorf("updating task %d: %w", taskID, err)
@@ -106,22 +106,22 @@ func (s *Store) MoveTask(ctx context.Context, taskID int64, newStatus string, ne
 }
 
 // CreateTask inserts a new task at the end of a column.
-func (s *Store) CreateTask(ctx context.Context, projectID int64, title, description, status string, dueDate *time.Time) (model.Task, error) {
+func (s *Store) CreateTask(ctx context.Context, projectID int64, title, description string, columnID int64, dueDate *time.Time) (model.Task, error) {
 	var task model.Task
 
 	// Get max position in the column
 	var maxPos int
 	err := s.db.GetContext(ctx, &maxPos,
-		"SELECT COALESCE(MAX(position), -1) FROM tasks WHERE project_id = $1 AND status = $2 AND deleted_at IS NULL",
-		projectID, status)
+		"SELECT COALESCE(MAX(position), -1) FROM tasks WHERE project_id = $1 AND column_id = $2 AND deleted_at IS NULL",
+		projectID, columnID)
 	if err != nil {
 		return task, fmt.Errorf("getting max position: %w", err)
 	}
 
 	// Insert at max + 1
 	err = s.db.GetContext(ctx, &task,
-		"INSERT INTO tasks (project_id, title, description, status, position, due_date) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *",
-		projectID, title, description, status, maxPos+1, dueDate)
+		"INSERT INTO tasks (project_id, title, description, column_id, position, due_date) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *",
+		projectID, title, description, columnID, maxPos+1, dueDate)
 	if err != nil {
 		return task, fmt.Errorf("creating task: %w", err)
 	}
@@ -152,8 +152,8 @@ func (s *Store) DeleteTask(ctx context.Context, taskID int64) error {
 
 	// Close gap in positions
 	_, err = tx.ExecContext(ctx,
-		"UPDATE tasks SET position = position - 1, updated_at = now() WHERE project_id = $1 AND status = $2 AND position > $3 AND deleted_at IS NULL",
-		task.ProjectID, task.Status, task.Position)
+		"UPDATE tasks SET position = position - 1, updated_at = now() WHERE project_id = $1 AND column_id = $2 AND position > $3 AND deleted_at IS NULL",
+		task.ProjectID, task.ColumnID, task.Position)
 	if err != nil {
 		return fmt.Errorf("closing gap after delete: %w", err)
 	}
@@ -164,12 +164,12 @@ func (s *Store) DeleteTask(ctx context.Context, taskID int64) error {
 	return nil
 }
 
-// CountTasksByStatus returns the number of active tasks in a given status for a project.
-func (s *Store) CountTasksByStatus(ctx context.Context, projectID int64, status string) (int, error) {
+// CountTasksByColumn returns the number of active tasks in a given column for a project.
+func (s *Store) CountTasksByColumn(ctx context.Context, projectID int64, columnID int64) (int, error) {
 	var count int
 	err := s.db.GetContext(ctx, &count,
-		"SELECT COUNT(*) FROM tasks WHERE project_id = $1 AND status = $2 AND deleted_at IS NULL",
-		projectID, status)
+		"SELECT COUNT(*) FROM tasks WHERE project_id = $1 AND column_id = $2 AND deleted_at IS NULL",
+		projectID, columnID)
 	if err != nil {
 		return 0, fmt.Errorf("counting tasks: %w", err)
 	}
@@ -280,57 +280,57 @@ func (s *Store) DeleteMetadataKey(ctx context.Context, taskID int64, key string)
 	return nil
 }
 
-// UpdateTaskStatus updates a task's status and moves it to the end of the new column.
-// Returns the old status for updating the UI.
-func (s *Store) UpdateTaskStatus(ctx context.Context, taskID int64, newStatus string) (string, error) {
+// UpdateTaskColumn updates a task's column and moves it to the end of the new column.
+// Returns the old column ID for updating the UI.
+func (s *Store) UpdateTaskColumn(ctx context.Context, taskID int64, newColumnID int64) (int64, error) {
 	tx, err := s.db.BeginTxx(ctx, nil)
 	if err != nil {
-		return "", fmt.Errorf("beginning transaction: %w", err)
+		return 0, fmt.Errorf("beginning transaction: %w", err)
 	}
 	defer tx.Rollback() //nolint:errcheck
 
 	// Get the task's current state
 	var task model.Task
 	if err := tx.GetContext(ctx, &task, "SELECT * FROM tasks WHERE id = $1 AND deleted_at IS NULL FOR UPDATE", taskID); err != nil {
-		return "", fmt.Errorf("getting task %d: %w", taskID, err)
+		return 0, fmt.Errorf("getting task %d: %w", taskID, err)
 	}
 
-	oldStatus := task.Status
+	oldColumnID := task.ColumnID
 
-	// If status hasn't changed, nothing to do
-	if task.Status == newStatus {
-		return oldStatus, nil
+	// If column hasn't changed, nothing to do
+	if task.ColumnID == newColumnID {
+		return oldColumnID, nil
 	}
 
 	// Close gap in old column
 	_, err = tx.ExecContext(ctx,
-		"UPDATE tasks SET position = position - 1, updated_at = now() WHERE project_id = $1 AND status = $2 AND position > $3 AND deleted_at IS NULL",
-		task.ProjectID, task.Status, task.Position,
+		"UPDATE tasks SET position = position - 1, updated_at = now() WHERE project_id = $1 AND column_id = $2 AND position > $3 AND deleted_at IS NULL",
+		task.ProjectID, task.ColumnID, task.Position,
 	)
 	if err != nil {
-		return "", fmt.Errorf("closing gap in old column: %w", err)
+		return 0, fmt.Errorf("closing gap in old column: %w", err)
 	}
 
 	// Get max position in new column
 	var maxPos int
 	err = tx.GetContext(ctx, &maxPos,
-		"SELECT COALESCE(MAX(position), -1) FROM tasks WHERE project_id = $1 AND status = $2 AND deleted_at IS NULL",
-		task.ProjectID, newStatus)
+		"SELECT COALESCE(MAX(position), -1) FROM tasks WHERE project_id = $1 AND column_id = $2 AND deleted_at IS NULL",
+		task.ProjectID, newColumnID)
 	if err != nil {
-		return "", fmt.Errorf("getting max position in new column: %w", err)
+		return 0, fmt.Errorf("getting max position in new column: %w", err)
 	}
 
 	// Move task to end of new column
 	_, err = tx.ExecContext(ctx,
-		"UPDATE tasks SET status = $1, position = $2, updated_at = NOW() WHERE id = $3",
-		newStatus, maxPos+1, taskID,
+		"UPDATE tasks SET column_id = $1, position = $2, updated_at = NOW() WHERE id = $3",
+		newColumnID, maxPos+1, taskID,
 	)
 	if err != nil {
-		return "", fmt.Errorf("updating task status: %w", err)
+		return 0, fmt.Errorf("updating task column: %w", err)
 	}
 
 	if err := tx.Commit(); err != nil {
-		return "", fmt.Errorf("committing transaction: %w", err)
+		return 0, fmt.Errorf("committing transaction: %w", err)
 	}
-	return oldStatus, nil
+	return oldColumnID, nil
 }

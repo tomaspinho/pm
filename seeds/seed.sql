@@ -22,13 +22,14 @@ INSERT INTO projects (id, name, description, organization_id)
 VALUES (1, 'My Project', 'A sample project to get started with pm', 1)
 ON CONFLICT (id) DO NOTHING;
 
--- Example tasks in different statuses
-INSERT INTO tasks (id, project_id, title, description, status, position, author, metadata)
+-- Example tasks in different columns
+-- Note: column_id 1 = To Do, 2 = In Progress, 3 = Done (from default columns migration)
+INSERT INTO tasks (id, project_id, title, description, column_id, position, author, metadata)
 VALUES
-    (1, 1, 'Set up CI pipeline',         'Configure GitHub Actions for build, lint, and test.',    'todo',        0, 'alice@example.com', '{"priority": "high", "labels": ["devops", "infrastructure"]}'),
-    (2, 1, 'Design landing page',        'Create wireframes and mockups for the landing page.',    'todo',        1, 'bob@example.com',   '{"priority": "medium", "labels": ["design", "frontend"]}'),
-    (3, 1, 'Implement user auth',        'Add login and registration with session cookies.',       'in_progress', 0, 'alice@example.com', '{"priority": "high", "labels": ["backend", "security"]}'),
-    (4, 1, 'Write database migrations',  'Create tables for projects, tasks, and users.',          'done',        0, 'charlie@example.com', '{"priority": "high", "labels": ["database"]}')
+    (1, 1, 'Set up CI pipeline',         'Configure GitHub Actions for build, lint, and test.',    1, 0, 'alice@example.com', '{"priority": "high", "labels": ["devops", "infrastructure"]}'),
+    (2, 1, 'Design landing page',        'Create wireframes and mockups for the landing page.',    1, 1, 'bob@example.com',   '{"priority": "medium", "labels": ["design", "frontend"]}'),
+    (3, 1, 'Implement user auth',        'Add login and registration with session cookies.',       2, 0, 'alice@example.com', '{"priority": "high", "labels": ["backend", "security"]}'),
+    (4, 1, 'Write database migrations',  'Create tables for projects, tasks, and users.',          3, 0, 'charlie@example.com', '{"priority": "high", "labels": ["database"]}')
 ON CONFLICT (id) DO NOTHING;
 
 -- Example task dependencies

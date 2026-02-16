@@ -1,0 +1,11 @@
+package components
+
+import "pm/internal/model"
+
+// ColumnBadge is a placeholder component for column status display in task detail pane.
+// TODO: Implement full column dropdown with colors once TaskDetailPane is updated.
+templ ColumnBadge(taskWithDeps model.TaskWithDependencies, orgID int64, columns []model.ProjectColumn) {
+	<div id="column-badge" hx-swap-oob="true">
+		<span class="text-sm text-gray-600">Column updated</span>
+	</div>
+}

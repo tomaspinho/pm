@@ -40,7 +40,12 @@ func (h *Handler) HandleBoard(c fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to load tasks")
 	}
 
-	grouped := store.GroupTasksByStatus(tasks)
+	columns, err := h.store.GetProjectColumns(ctx, project.ID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to load columns")
+	}
+
+	grouped := store.GroupTasksByColumn(tasks, columns)
 
 	// Build nav context.
 	user, err := middleware.GetCurrentUser(c)
@@ -62,5 +67,5 @@ func (h *Handler) HandleBoard(c fiber.Ctx) error {
 	// Track last viewed project.
 	_ = h.store.UpdateLastViewedProject(ctx, user.ID, project.ID)
 
-	return render(c, views.BoardPage(project, grouped, nav))
+	return render(c, views.BoardPage(project, columns, grouped, nav))
 }

@@ -9,7 +9,7 @@ type Task struct {
 	Title       string       `db:"title"       json:"title"`
 	Description string       `db:"description" json:"description"`
 	Author      string       `db:"author"      json:"author"`
-	Status      string       `db:"status"      json:"status"`
+	ColumnID    int64        `db:"column_id"   json:"column_id"`
 	Position    int          `db:"position"    json:"position"`
 	Metadata    TaskMetadata `db:"metadata"    json:"metadata"`
 	DueDate     *time.Time   `db:"due_date"    json:"due_date,omitempty"`
@@ -21,32 +21,6 @@ type Task struct {
 // IsDeleted checks if the task is soft-deleted.
 func (t *Task) IsDeleted() bool {
 	return t.DeletedAt != nil
-}
-
-// Kanban column statuses in display order.
-const (
-	StatusTodo       = "todo"
-	StatusInProgress = "in_progress"
-	StatusDone       = "done"
-)
-
-// AllStatuses returns the ordered list of kanban column statuses.
-func AllStatuses() []string {
-	return []string{StatusTodo, StatusInProgress, StatusDone}
-}
-
-// StatusLabel returns a human-readable label for a status.
-func StatusLabel(status string) string {
-	switch status {
-	case StatusTodo:
-		return "To Do"
-	case StatusInProgress:
-		return "In Progress"
-	case StatusDone:
-		return "Done"
-	default:
-		return status
-	}
 }
 
 // IsOverdue returns true if the task is past its due date
@@ -77,3 +51,4 @@ func (t *Task) DueDateString() string {
 	}
 	return t.DueDate.Format("2006-01-02")
 }
+

@@ -42,7 +42,7 @@ func parseOrgAndProject(c fiber.Ctx) (orgID, projectID int64, err error) {
 	return orgID, projectID, nil
 }
 
-// HandleMoveTask updates a task's status and position when it is dragged.
+// HandleMoveTask updates a task's column and position when it is dragged.
 // PATCH /orgs/:org_id/projects/:project_id/tasks/:id/move
 func (h *Handler) HandleMoveTask(c fiber.Ctx) error {
 	taskID, err := strconv.ParseInt(c.Params("id"), 10, 64)
@@ -50,9 +50,9 @@ func (h *Handler) HandleMoveTask(c fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "invalid task id")
 	}
 
-	newStatus := c.FormValue("status")
-	if newStatus == "" {
-		return fiber.NewError(fiber.StatusBadRequest, "status is required")
+	newColumnID, err := strconv.ParseInt(c.FormValue("columnID"), 10, 64)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "columnID is required")
 	}
 
 	newPosition, err := strconv.Atoi(c.FormValue("position"))
@@ -60,7 +60,7 @@ func (h *Handler) HandleMoveTask(c fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "invalid position")
 	}
 
-	if err := h.store.MoveTask(c.Context(), taskID, newStatus, newPosition); err != nil {
+	if err := h.store.MoveTask(c.Context(), taskID, newColumnID, newPosition); err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to move task")
 	}
 
@@ -68,35 +68,35 @@ func (h *Handler) HandleMoveTask(c fiber.Ctx) error {
 }
 
 // HandleNewTaskForm returns the add task form HTML.
-// GET /orgs/:org_id/projects/:project_id/tasks/new-form?status=...
+// GET /orgs/:org_id/projects/:project_id/tasks/new-form?columnID=...
 func (h *Handler) HandleNewTaskForm(c fiber.Ctx) error {
 	orgID, projectID, err := parseOrgAndProject(c)
 	if err != nil {
 		return err
 	}
 
-	status := c.Query("status")
-	if status == "" {
-		return fiber.NewError(fiber.StatusBadRequest, "status is required")
+	columnID, err := strconv.ParseInt(c.Query("columnID"), 10, 64)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "columnID is required")
 	}
 
-	return render(c, components.AddTaskForm(status, orgID, projectID))
+	return render(c, components.AddTaskForm(columnID, orgID, projectID))
 }
 
 // HandleCancelForm returns the "Add task" button HTML.
-// GET /orgs/:org_id/projects/:project_id/tasks/cancel-form?status=...
+// GET /orgs/:org_id/projects/:project_id/tasks/cancel-form?columnID=...
 func (h *Handler) HandleCancelForm(c fiber.Ctx) error {
 	orgID, projectID, err := parseOrgAndProject(c)
 	if err != nil {
 		return err
 	}
 
-	status := c.Query("status")
-	if status == "" {
-		return fiber.NewError(fiber.StatusBadRequest, "status is required")
+	columnID, err := strconv.ParseInt(c.Query("columnID"), 10, 64)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "columnID is required")
 	}
 
-	return render(c, components.AddTaskButton(status, orgID, projectID))
+	return render(c, components.AddTaskButton(columnID, orgID, projectID))
 }
 
 // HandleCreateTask creates a new task and returns the new card HTML + OOB updates.
@@ -118,9 +118,9 @@ func (h *Handler) HandleCreateTask(c fiber.Ctx) error {
 	}
 
 	description := c.FormValue("description")
-	status := c.FormValue("status")
-	if status == "" {
-		return fiber.NewError(fiber.StatusBadRequest, "status is required")
+	columnID, err := strconv.ParseInt(c.FormValue("columnID"), 10, 64)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "columnID is required")
 	}
 
 	dueDate, err := parseDueDate(c.FormValue("due_date"))
@@ -128,18 +128,18 @@ func (h *Handler) HandleCreateTask(c fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
 
-	task, err := h.store.CreateTask(c.Context(), projectID, title, description, status, dueDate)
+	task, err := h.store.CreateTask(c.Context(), projectID, title, description, columnID, dueDate)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to create task")
 	}
 
 	// Get updated count.
-	count, err := h.store.CountTasksByStatus(c.Context(), projectID, status)
+	count, err := h.store.CountTasksByColumn(c.Context(), projectID, columnID)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to get task count")
 	}
 
-	return render(c, views.NewTaskResponse(task, orgID, status, count))
+	return render(c, views.NewTaskResponse(task, orgID, columnID, count))
 }
 
 // HandleDeleteTask deletes a task and returns OOB count update.
@@ -155,7 +155,7 @@ func (h *Handler) HandleDeleteTask(c fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "invalid task id")
 	}
 
-	// Get task info before deleting (for status).
+	// Get task info before deleting (for column ID).
 	task, err := h.store.GetTask(c.Context(), taskID)
 	if err != nil {
 		return fiber.NewError(fiber.StatusNotFound, "task not found")
@@ -167,13 +167,13 @@ func (h *Handler) HandleDeleteTask(c fiber.Ctx) error {
 	}
 
 	// Get updated count.
-	count, err := h.store.CountTasksByStatus(c.Context(), projectID, task.Status)
+	count, err := h.store.CountTasksByColumn(c.Context(), projectID, task.ColumnID)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to get task count")
 	}
 
 	_ = orgID // orgID validated by middleware; not needed for delete response.
-	return render(c, views.DeleteTaskResponse(task.Status, count))
+	return render(c, views.DeleteTaskResponse(task.ColumnID, count))
 }
 
 // HandleTaskDetail returns the detail pane for a task.
@@ -429,9 +429,9 @@ func (h *Handler) HandleUpdateMetadata(c fiber.Ctx) error {
 	return render(c, views.MetadataSection(taskID, orgID, projectID, task.Metadata))
 }
 
-// HandleUpdateStatus updates a task's status and moves it to the end of the new column.
-// PATCH /orgs/:org_id/projects/:project_id/tasks/:id/status
-func (h *Handler) HandleUpdateStatus(c fiber.Ctx) error {
+// HandleUpdateColumn updates a task's column and moves it to the end of the new column.
+// PATCH /orgs/:org_id/projects/:project_id/tasks/:id/column
+func (h *Handler) HandleUpdateColumn(c fiber.Ctx) error {
 	orgID, projectID, err := parseOrgAndProject(c)
 	if err != nil {
 		return err
@@ -442,25 +442,26 @@ func (h *Handler) HandleUpdateStatus(c fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "invalid task id")
 	}
 
-	newStatus := c.FormValue("status")
-	if newStatus == "" {
-		return fiber.NewError(fiber.StatusBadRequest, "status is required")
-	}
-
-	// Validate status.
-	validStatuses := map[string]bool{
-		"todo":        true,
-		"in_progress": true,
-		"done":        true,
-	}
-	if !validStatuses[newStatus] {
-		return fiber.NewError(fiber.StatusBadRequest, "invalid status")
-	}
-
-	// Update status and get the old status.
-	oldStatus, err := h.store.UpdateTaskStatus(c.Context(), taskID, newStatus)
+	newColumnID, err := strconv.ParseInt(c.FormValue("columnID"), 10, 64)
 	if err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, "failed to update status")
+		return fiber.NewError(fiber.StatusBadRequest, "columnID is required")
+	}
+
+	// Validate column belongs to project
+	task, err := h.store.GetTask(c.Context(), taskID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusNotFound, "task not found")
+	}
+
+	valid, err := h.store.ValidateColumnOwnership(c.Context(), newColumnID, task.ProjectID)
+	if err != nil || !valid {
+		return fiber.NewError(fiber.StatusBadRequest, "invalid column")
+	}
+
+	// Update column and get the old column ID.
+	oldColumnID, err := h.store.UpdateTaskColumn(c.Context(), taskID, newColumnID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to update column")
 	}
 
 	// Get the updated task with dependencies.
@@ -469,13 +470,18 @@ func (h *Handler) HandleUpdateStatus(c fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to reload task")
 	}
 
-	// Get all tasks for the project to update the kanban board.
+	// Get all tasks and columns for the project to update the kanban board.
 	tasks, err := h.store.ListTasksByProject(c.Context(), projectID)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to load tasks")
 	}
 
-	tasksByStatus := store.GroupTasksByStatus(tasks)
+	columns, err := h.store.GetProjectColumns(c.Context(), projectID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to load columns")
+	}
 
-	return render(c, views.StatusUpdateResponse(*taskWithDeps, orgID, oldStatus, tasksByStatus))
+	tasksByColumn := store.GroupTasksByColumn(tasks, columns)
+
+	return render(c, views.ColumnUpdateResponse(*taskWithDeps, orgID, oldColumnID, tasksByColumn, columns))
 }
