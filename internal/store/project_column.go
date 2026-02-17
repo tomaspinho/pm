@@ -139,7 +139,7 @@ func (s *Store) DeleteProjectColumn(ctx context.Context, columnID, targetColumnI
 		return fmt.Errorf("moving tasks to target column: %w", err)
 	}
 
-	// Soft delete the column
+	// Soft delete the column first to remove it from the unique constraint
 	_, err = tx.ExecContext(ctx,
 		"UPDATE project_columns SET deleted_at = NOW() WHERE id = $1",
 		columnID)
@@ -148,6 +148,7 @@ func (s *Store) DeleteProjectColumn(ctx context.Context, columnID, targetColumnI
 	}
 
 	// Close gap in column positions
+	// After soft-delete, the unique constraint no longer includes this column
 	_, err = tx.ExecContext(ctx,
 		"UPDATE project_columns SET position = position - 1 WHERE project_id = $1 AND position > $2 AND deleted_at IS NULL",
 		column.ProjectID, column.Position)

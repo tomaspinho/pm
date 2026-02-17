@@ -80,15 +80,14 @@ templ ColumnSetupPage(project model.Project, orgID int64, existingColumns []mode
 }
 
 templ columnSetupScript(existingColumns []model.ProjectColumn, taskCounts map[int64]int) {
-	<!-- Data injection -->
-	<script type="application/json" id="existing-columns-data">{ serializeColumnsJSON(existingColumns) }</script>
-	<script type="application/json" id="task-counts-data">{ serializeTaskCountsJSON(taskCounts) }</script>
-	
+	<!-- Data injection via hidden div -->
+	<div id="column-data" style="display:none" data-columns={ serializeColumnsJSON(existingColumns) } data-task-counts={ serializeTaskCountsJSON(taskCounts) }></div>
 	<script type="text/javascript">
 	(function() {
-		// Load data from JSON script tags
-		var existingColumns = JSON.parse(document.getElementById('existing-columns-data').textContent);
-		var taskCounts = JSON.parse(document.getElementById('task-counts-data').textContent);
+		// Load data from data attributes
+		var dataEl = document.getElementById('column-data');
+		var existingColumns = JSON.parse(dataEl.getAttribute('data-columns'));
+		var taskCounts = JSON.parse(dataEl.getAttribute('data-task-counts'));
 		
 		var defaultColumns = [
 			{ name: 'To Do', color: '#6B7280' },
@@ -178,6 +177,31 @@ templ columnSetupScript(existingColumns []model.ProjectColumn, taskCounts map[in
 			return modal;
 		}
 
+		function createErrorModal(title, message) {
+			var modalContainer = document.getElementById('delete-modal-container');
+			var modal = document.createElement('div');
+			modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+			
+			modal.innerHTML = '<div class="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">' +
+				'<h3 class="text-lg font-semibold text-gray-900 mb-3">' + escapeHtml(title) + '</h3>' +
+				'<p class="text-sm text-gray-700 mb-6">' + escapeHtml(message) + '</p>' +
+				'<div class="flex justify-end">' +
+				'<button type="button" class="close-error px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors cursor-pointer">OK</button>' +
+				'</div></div>';
+			
+			modal.querySelector('.close-error').addEventListener('click', function() {
+				modal.remove();
+			});
+			
+			modal.addEventListener('click', function(e) {
+				if (e.target === modal) {
+					modal.remove();
+				}
+			});
+			
+			modalContainer.appendChild(modal);
+		}
+
 		function createDeleteModal(columnName, taskCount, otherColumns, onConfirm) {
 			var modalContainer = document.getElementById('delete-modal-container');
 			var modal = document.createElement('div');
@@ -255,7 +279,7 @@ templ columnSetupScript(existingColumns []model.ProjectColumn, taskCounts map[in
 				
 				// Check if this is the last column
 				if (allRows.length === 1) {
-					alert('Cannot delete the last column');
+					createErrorModal('Cannot Delete Column', 'At least one column is required. You cannot delete the last remaining column.');
 					return;
 				}
 				
@@ -289,6 +313,41 @@ templ columnSetupScript(existingColumns []model.ProjectColumn, taskCounts map[in
 				});
 
 				document.body.appendChild(picker);
+			});
+
+			// Real-time duplicate name validation
+			var nameInput = row.querySelector('input[type="text"]');
+			nameInput.addEventListener('input', function() {
+				var currentName = this.value.trim().toLowerCase();
+				var allRows = Array.from(container.querySelectorAll('.flex.items-center.gap-2'));
+				var hasDuplicate = false;
+				
+				// Check if this name exists in other rows
+				allRows.forEach(function(otherRow) {
+					if (otherRow !== row) {
+						var otherNameInput = otherRow.querySelector('input[type="text"]');
+						var otherName = otherNameInput.value.trim().toLowerCase();
+						
+						if (currentName && otherName && currentName === otherName) {
+							hasDuplicate = true;
+							// Highlight both fields with red border
+							nameInput.classList.add('border-red-500');
+							nameInput.classList.remove('border-gray-300');
+							otherNameInput.classList.add('border-red-500');
+							otherNameInput.classList.remove('border-gray-300');
+						} else {
+							// Restore normal border styling
+							otherNameInput.classList.remove('border-red-500');
+							otherNameInput.classList.add('border-gray-300');
+						}
+					}
+				});
+				
+				// Remove error styling from current field if no duplicates
+				if (!hasDuplicate) {
+					nameInput.classList.remove('border-red-500');
+					nameInput.classList.add('border-gray-300');
+				}
 			});
 
 			container.appendChild(row);
@@ -347,6 +406,46 @@ templ columnSetupScript(existingColumns []model.ProjectColumn, taskCounts map[in
 			document.getElementById('column-form').addEventListener('submit', function(e) {
 				reindexColumns();
 				
+				var container = document.getElementById('columns-container');
+				
+				// Check for at least one column
+				if (container.children.length === 0) {
+					e.preventDefault();
+					createErrorModal('No Columns', 'At least one column is required. Please add a column before saving.');
+					return;
+				}
+				
+				// Check for duplicate column names (case-insensitive)
+				var columnNames = [];
+				var rows = container.querySelectorAll('.flex.items-center.gap-2');
+				var hasDuplicates = false;
+				var duplicateName = '';
+				
+				rows.forEach(function(row) {
+					var nameInput = row.querySelector('input[type="text"]');
+					var name = nameInput.value.trim().toLowerCase();
+					
+					if (name && columnNames.includes(name)) {
+						hasDuplicates = true;
+						duplicateName = nameInput.value.trim();
+						// Highlight the duplicate field with red border
+						nameInput.classList.add('border-red-500');
+						nameInput.classList.remove('border-gray-300');
+						nameInput.focus();
+					} else if (name) {
+						columnNames.push(name);
+						// Restore normal border styling
+						nameInput.classList.remove('border-red-500');
+						nameInput.classList.add('border-gray-300');
+					}
+				});
+				
+				if (hasDuplicates) {
+					e.preventDefault();
+					createErrorModal('Duplicate Column Name', 'Column name "' + duplicateName + '" is used more than once. Each column must have a unique name.');
+					return;
+				}
+				
 				// Add hidden inputs for columns to delete
 				for (var columnId in columnsToDelete) {
 					var target = columnsToDelete[columnId];
@@ -363,12 +462,6 @@ templ columnSetupScript(existingColumns []model.ProjectColumn, taskCounts map[in
 						input.value = '';
 						this.appendChild(input);
 					}
-				}
-				
-				var container = document.getElementById('columns-container');
-				if (container.children.length === 0) {
-					e.preventDefault();
-					alert('At least one column is required');
 				}
 			});
 		});
