@@ -336,7 +336,8 @@ func (s *Store) UpdateTaskColumn(ctx context.Context, taskID int64, newColumnID 
 }
 
 // SearchOrganizationTasks searches for tasks across all projects in an organization
-// using PostgreSQL trigram similarity for fuzzy matching on title and description.
+// using ILIKE for substring matches and PostgreSQL trigram similarity for fuzzy matching.
+// Prioritizes exact substring matches, then fuzzy matches, then recent tasks.
 // Returns up to 'limit' results ordered by relevance.
 func (s *Store) SearchOrganizationTasks(ctx context.Context, orgID int64, query string, excludeTaskID int64, limit int) ([]model.TaskSearchResult, error) {
 	sql := `
@@ -360,10 +361,13 @@ func (s *Store) SearchOrganizationTasks(ctx context.Context, orgID int64, query 
 		  AND pc.deleted_at IS NULL
 		  AND t.id != $2
 		  AND (
-			  similarity(t.title, $3) > 0.3
-			  OR similarity(t.description, $3) > 0.2
+			  t.title ILIKE '%' || $3 || '%'
+			  OR t.description ILIKE '%' || $3 || '%'
+			  OR similarity(t.title, $3) > 0.2
+			  OR similarity(t.description, $3) > 0.15
 		  )
 		ORDER BY 
+			CASE WHEN t.title ILIKE '%' || $3 || '%' THEN 1 ELSE 2 END,
 			similarity(t.title, $3) DESC,
 			similarity(t.description, $3) DESC,
 			t.updated_at DESC
