@@ -422,13 +422,20 @@ templ DependencySection(taskWithDeps model.TaskWithDependencies, orgID int64) {
 						<div class="flex items-center gap-2 group">
 							<button
 								type="button"
-								class="flex-1 text-left px-3 py-2 bg-gray-50 hover:bg-gray-100 rounded-lg border border-gray-200 transition-colors"
+								class="flex-1 text-left px-3 py-2 bg-gray-50 hover:bg-gray-100 rounded-lg border border-gray-200 transition-colors flex items-center gap-2"
 								hx-get={ taskURLPrefix(orgID, dep.ProjectID) + "/" + fmt.Sprintf("%d", dep.ID) + "/detail" }
 								hx-target="#detail-pane"
 								hx-swap="outerHTML"
 							>
-								<span class="text-sm text-gray-900">{ dep.Title }</span>
-								<span class="text-xs text-gray-500 ml-2">({ fmt.Sprintf("Column %d", dep.ColumnID) })</span>
+								<span
+									class="w-2 h-2 rounded-full flex-shrink-0"
+									style={ "background-color: " + dep.ColumnColor }
+									title={ dep.ColumnName }
+								></span>
+								<span class="text-sm text-gray-900 flex-1">{ dep.Title }</span>
+								if dep.ProjectID != taskWithDeps.ProjectID {
+									<span class="text-xs text-gray-500 px-1.5 py-0.5 bg-gray-200 rounded">Cross-project</span>
+								}
 							</button>
 							<button
 								type="button"
@@ -456,13 +463,20 @@ templ DependencySection(taskWithDeps model.TaskWithDependencies, orgID int64) {
 					for _, dep := range taskWithDeps.Blocking {
 						<button
 							type="button"
-							class="w-full text-left px-3 py-2 bg-gray-50 hover:bg-gray-100 rounded-lg border border-gray-200 transition-colors"
+							class="w-full text-left px-3 py-2 bg-gray-50 hover:bg-gray-100 rounded-lg border border-gray-200 transition-colors flex items-center gap-2"
 							hx-get={ taskURLPrefix(orgID, dep.ProjectID) + "/" + fmt.Sprintf("%d", dep.ID) + "/detail" }
 							hx-target="#detail-pane"
 							hx-swap="outerHTML"
 						>
-							<span class="text-sm text-gray-900">{ dep.Title }</span>
-							<span class="text-xs text-gray-500 ml-2">({ fmt.Sprintf("Column %d", dep.ColumnID) })</span>
+							<span
+								class="w-2 h-2 rounded-full flex-shrink-0"
+								style={ "background-color: " + dep.ColumnColor }
+								title={ dep.ColumnName }
+							></span>
+							<span class="text-sm text-gray-900 flex-1">{ dep.Title }</span>
+							if dep.ProjectID != taskWithDeps.ProjectID {
+								<span class="text-xs text-gray-500 px-1.5 py-0.5 bg-gray-200 rounded">Cross-project</span>
+							}
 						</button>
 					}
 				</div>
@@ -483,30 +497,39 @@ templ DependencySection(taskWithDeps model.TaskWithDependencies, orgID int64) {
 				id={ "add-dependency-form-" + fmt.Sprintf("%d", taskWithDeps.ID) }
 				class="hidden"
 			>
-				<form
-					hx-post={ taskURLPrefix(orgID, taskWithDeps.ProjectID) + "/" + fmt.Sprintf("%d", taskWithDeps.ID) + "/dependencies" }
-					hx-target={ "#dependency-section-" + fmt.Sprintf("%d", taskWithDeps.ID) }
-					hx-swap="outerHTML"
-					class="flex gap-2"
-				>
-					<input
-						type="number"
-						name="depends_on_id"
-						placeholder="Task ID"
-						class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-						required
-					/>
-					<button type="submit" class="px-3 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700">
-						Add
-					</button>
-					<button
-						type="button"
-						class="px-3 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
-						onclick={ toggleAddDependencyForm(fmt.Sprintf("%d", taskWithDeps.ID)) }
+				<div class="relative">
+					<div class="flex gap-2">
+						<div class="flex-1 relative">
+							<input
+								type="text"
+								id={ "task-search-" + fmt.Sprintf("%d", taskWithDeps.ID) }
+								placeholder="Search for a task..."
+								autocomplete="off"
+								class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+							/>
+							<div
+								id={ "task-dropdown-" + fmt.Sprintf("%d", taskWithDeps.ID) }
+								class="hidden absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-80 overflow-y-auto"
+							></div>
+						</div>
+						<button
+							type="button"
+							class="px-3 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+							onclick={ toggleAddDependencyForm(fmt.Sprintf("%d", taskWithDeps.ID)) }
+						>
+							Cancel
+						</button>
+					</div>
+					<form
+						id={ "hidden-dependency-form-" + fmt.Sprintf("%d", taskWithDeps.ID) }
+						hx-post={ taskURLPrefix(orgID, taskWithDeps.ProjectID) + "/" + fmt.Sprintf("%d", taskWithDeps.ID) + "/dependencies" }
+						hx-target={ "#dependency-section-" + fmt.Sprintf("%d", taskWithDeps.ID) }
+						hx-swap="outerHTML"
+						class="hidden"
 					>
-						Cancel
-					</button>
-				</form>
+						<input type="hidden" name="depends_on_id" value=""/>
+					</form>
+				</div>
 			</div>
 		</div>
 	</div>
@@ -611,16 +634,176 @@ script cancelEditField(field string) {
 
 script toggleAddDependencyForm(taskID string) {
 	var form = document.getElementById('add-dependency-form-' + taskID);
+	var searchInput = document.getElementById('task-search-' + taskID);
+	var dropdown = document.getElementById('task-dropdown-' + taskID);
+	
 	if (form.classList.contains('hidden')) {
 		form.classList.remove('hidden');
+		// Initialize autocomplete when form is shown
+		if (searchInput && !searchInput.dataset.initialized) {
+			initTaskAutocomplete(taskID);
+			searchInput.dataset.initialized = 'true';
+		}
+		// Focus the search input
+		setTimeout(function() {
+			if (searchInput) searchInput.focus();
+		}, 100);
 	} else {
 		form.classList.add('hidden');
-		// Clear form input when hiding
-		var input = form.querySelector('input[type="number"]');
-		if (input) {
-			input.value = '';
+		// Clear search input and hide dropdown when hiding
+		if (searchInput) {
+			searchInput.value = '';
+		}
+		if (dropdown) {
+			dropdown.classList.add('hidden');
 		}
 	}
+}
+
+script initTaskAutocomplete(taskID string) {
+	var searchInput = document.getElementById('task-search-' + taskID);
+	var dropdown = document.getElementById('task-dropdown-' + taskID);
+	var hiddenForm = document.getElementById('hidden-dependency-form-' + taskID);
+	
+	// Extract org and project IDs from the page
+	var pathParts = window.location.pathname.split('/');
+	var orgID = pathParts[2]; // /orgs/:org_id/...
+	var projectID = pathParts[4]; // /projects/:project_id/...
+	
+	var debounceTimer;
+	var selectedIndex = -1;
+	var currentResults = [];
+	
+	// Load recent tasks on init
+	loadTasks('');
+	
+	function loadTasks(query) {
+		var url = '/orgs/' + orgID + '/tasks/search?q=' + encodeURIComponent(query) + '&exclude=' + taskID;
+		
+		fetch(url)
+			.then(function(response) { return response.json(); })
+			.then(function(results) {
+				currentResults = results || [];
+				selectedIndex = -1;
+				renderDropdown(results, query);
+			})
+			.catch(function(err) {
+				console.error('Failed to load tasks:', err);
+			});
+	}
+	
+	function renderDropdown(results, query) {
+		if (!results || results.length === 0) {
+			dropdown.innerHTML = '<div class="px-4 py-3 text-sm text-gray-500 italic">No tasks found</div>';
+			dropdown.classList.remove('hidden');
+			return;
+		}
+		
+		var html = '';
+		results.forEach(function(task, index) {
+			var isCurrentProject = task.project_id.toString() === projectID;
+			var bgClass = isCurrentProject 
+				? 'bg-indigo-50 border-l-4 border-l-indigo-500 hover:bg-indigo-100' 
+				: 'bg-gray-100 hover:bg-gray-200';
+			var activeClass = index === selectedIndex ? 'ring-2 ring-indigo-500' : '';
+			
+			html += '<button type="button" class="w-full text-left px-4 py-3 ' + bgClass + ' ' + activeClass + ' transition-colors border-b border-gray-200 last:border-b-0" data-task-id="' + task.id + '" data-index="' + index + '">';
+			html += '  <div class="flex items-center gap-2 mb-1">';
+			html += '    <span class="w-2 h-2 rounded-full flex-shrink-0" style="background-color: ' + task.column_color + '" title="' + task.column_name + '"></span>';
+			html += '    <span class="text-sm font-medium text-gray-900 flex-1">' + escapeHtml(task.title) + '</span>';
+			if (!isCurrentProject) {
+				html += '    <span class="text-xs text-gray-600 px-1.5 py-0.5 bg-white/50 rounded">' + escapeHtml(task.project_name) + '</span>';
+			}
+			html += '  </div>';
+			if (task.description) {
+				html += '  <div class="text-xs text-gray-600 line-clamp-1 ml-4">' + escapeHtml(task.description) + '</div>';
+			}
+			html += '</button>';
+		});
+		
+		dropdown.innerHTML = html;
+		dropdown.classList.remove('hidden');
+		
+		// Add click handlers to dropdown items
+		dropdown.querySelectorAll('button[data-task-id]').forEach(function(btn) {
+			btn.addEventListener('click', function() {
+				selectTask(parseInt(btn.dataset.taskId));
+			});
+		});
+	}
+	
+	function escapeHtml(text) {
+		var div = document.createElement('div');
+		div.textContent = text;
+		return div.innerHTML;
+	}
+	
+	function selectTask(taskId) {
+		// Check for circular dependency
+		var checkUrl = '/orgs/' + orgID + '/projects/' + projectID + '/tasks/' + taskID + '/dependencies/check?depends_on=' + taskId;
+		
+		fetch(checkUrl)
+			.then(function(response) { return response.json(); })
+			.then(function(data) {
+				if (data.would_create_cycle) {
+					alert('Cannot add this dependency: it would create a circular dependency chain.');
+					return;
+				}
+				
+				// Submit the form
+				var hiddenInput = hiddenForm.querySelector('input[name="depends_on_id"]');
+				hiddenInput.value = taskId;
+				htmx.trigger(hiddenForm, 'submit');
+				
+				// Close the form
+				toggleAddDependencyForm(taskID);
+			})
+			.catch(function(err) {
+				console.error('Failed to check dependency:', err);
+				alert('Failed to add dependency. Please try again.');
+			});
+	}
+	
+	// Search input event handlers
+	searchInput.addEventListener('input', function(e) {
+		clearTimeout(debounceTimer);
+		var query = e.target.value.trim();
+		
+		debounceTimer = setTimeout(function() {
+			loadTasks(query);
+		}, 300);
+	});
+	
+	searchInput.addEventListener('keydown', function(e) {
+		if (dropdown.classList.contains('hidden')) return;
+		
+		if (e.key === 'ArrowDown') {
+			e.preventDefault();
+			selectedIndex = Math.min(selectedIndex + 1, currentResults.length - 1);
+			renderDropdown(currentResults, searchInput.value.trim());
+		} else if (e.key === 'ArrowUp') {
+			e.preventDefault();
+			selectedIndex = Math.max(selectedIndex - 1, -1);
+			renderDropdown(currentResults, searchInput.value.trim());
+		} else if (e.key === 'Enter') {
+			e.preventDefault();
+			if (selectedIndex >= 0 && currentResults[selectedIndex]) {
+				selectTask(currentResults[selectedIndex].id);
+			} else if (currentResults.length > 0) {
+				selectTask(currentResults[0].id);
+			}
+		} else if (e.key === 'Escape') {
+			e.preventDefault();
+			dropdown.classList.add('hidden');
+		}
+	});
+	
+	// Close dropdown when clicking outside
+	document.addEventListener('click', function(e) {
+		if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) {
+			dropdown.classList.add('hidden');
+		}
+	});
 }
 
 script toggleAddMetadataForm(taskID string) {

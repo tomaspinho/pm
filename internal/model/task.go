@@ -52,3 +52,23 @@ func (t *Task) DueDateString() string {
 	return t.DueDate.Format("2006-01-02")
 }
 
+// TaskWithColumn extends Task with column information for display purposes
+type TaskWithColumn struct {
+	Task
+	ColumnName  string `db:"column_name" json:"column_name"`
+	ColumnColor string `db:"column_color" json:"column_color"`
+}
+
+// TaskSearchResult represents a task in search results with full context
+type TaskSearchResult struct {
+	ID          int64      `db:"id" json:"id"`
+	Title       string     `db:"title" json:"title"`
+	Description string     `db:"description" json:"description"`
+	ProjectID   int64      `db:"project_id" json:"project_id"`
+	ProjectName string     `db:"project_name" json:"project_name"`
+	ColumnID    int64      `db:"column_id" json:"column_id"`
+	ColumnName  string     `db:"column_name" json:"column_name"`
+	ColumnColor string     `db:"column_color" json:"column_color"`
+	Author      string     `db:"author" json:"author"`
+	DueDate     *time.Time `db:"due_date" json:"due_date,omitempty"`
+}

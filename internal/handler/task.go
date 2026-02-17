@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"pm/internal/middleware"
+	"pm/internal/model"
 	"pm/internal/store"
 	"pm/views"
 	"pm/views/components"
@@ -310,6 +311,58 @@ func (h *Handler) HandleRemoveDependency(c fiber.Ctx) error {
 	}
 
 	return render(c, views.DependencySection(*taskWithDeps, orgID))
+}
+
+// HandleSearchTasks searches for tasks across the organization
+// GET /orgs/:org_id/tasks/search?q=query&exclude=123
+func (h *Handler) HandleSearchTasks(c fiber.Ctx) error {
+	orgID, err := strconv.ParseInt(c.Params("org_id"), 10, 64)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "invalid org id")
+	}
+
+	query := c.Query("q", "")
+	excludeTaskID, _ := strconv.ParseInt(c.Query("exclude"), 10, 64)
+	limit := 20
+
+	var results []model.TaskSearchResult
+
+	if len(query) < 2 {
+		// Return recent tasks if no query or query too short
+		results, err = h.store.GetRecentOrganizationTasks(c.Context(), orgID, excludeTaskID, limit)
+	} else {
+		// Search for tasks matching query
+		results, err = h.store.SearchOrganizationTasks(c.Context(), orgID, query, excludeTaskID, limit)
+	}
+
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to search tasks")
+	}
+
+	return c.JSON(results)
+}
+
+// HandleCheckDependencyCycle checks if adding a dependency would create a circular dependency
+// GET /orgs/:org_id/projects/:project_id/tasks/:id/dependencies/check?depends_on=456
+func (h *Handler) HandleCheckDependencyCycle(c fiber.Ctx) error {
+	taskID, err := strconv.ParseInt(c.Params("id"), 10, 64)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "invalid task id")
+	}
+
+	dependsOnID, err := strconv.ParseInt(c.Query("depends_on"), 10, 64)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "invalid depends_on id")
+	}
+
+	wouldCycle, err := h.store.WouldCreateCycle(c.Context(), taskID, dependsOnID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to check for cycles")
+	}
+
+	return c.JSON(fiber.Map{
+		"would_create_cycle": wouldCycle,
+	})
 }
 
 // HandleAddMetadata adds a metadata key-value pair.

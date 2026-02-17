@@ -334,3 +334,113 @@ func (s *Store) UpdateTaskColumn(ctx context.Context, taskID int64, newColumnID 
 	}
 	return oldColumnID, nil
 }
+
+// SearchOrganizationTasks searches for tasks across all projects in an organization
+// using PostgreSQL trigram similarity for fuzzy matching on title and description.
+// Returns up to 'limit' results ordered by relevance.
+func (s *Store) SearchOrganizationTasks(ctx context.Context, orgID int64, query string, excludeTaskID int64, limit int) ([]model.TaskSearchResult, error) {
+	sql := `
+		SELECT 
+			t.id,
+			t.title,
+			LEFT(t.description, 100) as description,
+			t.project_id,
+			p.name as project_name,
+			t.column_id,
+			pc.name as column_name,
+			pc.color as column_color,
+			t.author,
+			t.due_date
+		FROM tasks t
+		INNER JOIN projects p ON t.project_id = p.id
+		INNER JOIN project_columns pc ON t.column_id = pc.id
+		WHERE p.organization_id = $1
+		  AND t.deleted_at IS NULL
+		  AND p.deleted_at IS NULL
+		  AND pc.deleted_at IS NULL
+		  AND t.id != $2
+		  AND (
+			  similarity(t.title, $3) > 0.3
+			  OR similarity(t.description, $3) > 0.2
+		  )
+		ORDER BY 
+			similarity(t.title, $3) DESC,
+			similarity(t.description, $3) DESC,
+			t.updated_at DESC
+		LIMIT $4
+	`
+
+	var results []model.TaskSearchResult
+	err := s.db.SelectContext(ctx, &results, sql, orgID, excludeTaskID, query, limit)
+	if err != nil {
+		return nil, fmt.Errorf("searching tasks: %w", err)
+	}
+
+	return results, nil
+}
+
+// GetRecentOrganizationTasks returns the most recently updated tasks across all
+// projects in an organization. Used for the default dropdown state.
+func (s *Store) GetRecentOrganizationTasks(ctx context.Context, orgID int64, excludeTaskID int64, limit int) ([]model.TaskSearchResult, error) {
+	sql := `
+		SELECT 
+			t.id,
+			t.title,
+			LEFT(t.description, 100) as description,
+			t.project_id,
+			p.name as project_name,
+			t.column_id,
+			pc.name as column_name,
+			pc.color as column_color,
+			t.author,
+			t.due_date
+		FROM tasks t
+		INNER JOIN projects p ON t.project_id = p.id
+		INNER JOIN project_columns pc ON t.column_id = pc.id
+		WHERE p.organization_id = $1
+		  AND t.deleted_at IS NULL
+		  AND p.deleted_at IS NULL
+		  AND pc.deleted_at IS NULL
+		  AND t.id != $2
+		ORDER BY t.updated_at DESC
+		LIMIT $3
+	`
+
+	var results []model.TaskSearchResult
+	err := s.db.SelectContext(ctx, &results, sql, orgID, excludeTaskID, limit)
+	if err != nil {
+		return nil, fmt.Errorf("getting recent tasks: %w", err)
+	}
+
+	return results, nil
+}
+
+// WouldCreateCycle checks if adding a dependency would create a circular dependency chain
+func (s *Store) WouldCreateCycle(ctx context.Context, taskID, dependsOnID int64) (bool, error) {
+	// Check if dependsOnID eventually depends on taskID (which would create a cycle)
+	query := `
+		WITH RECURSIVE dependency_chain AS (
+			SELECT task_id, depends_on_id, 1 AS depth
+			FROM task_dependencies
+			WHERE task_id = $1
+			
+			UNION ALL
+			
+			SELECT td.task_id, td.depends_on_id, dc.depth + 1
+			FROM task_dependencies td
+			INNER JOIN dependency_chain dc ON td.task_id = dc.depends_on_id
+			WHERE dc.depth < 100
+		)
+		SELECT EXISTS (
+			SELECT 1 FROM dependency_chain WHERE depends_on_id = $2
+		)
+	`
+
+	var wouldCycle bool
+	err := s.db.GetContext(ctx, &wouldCycle, query, dependsOnID, taskID)
+	if err != nil {
+		return false, fmt.Errorf("checking for cycles: %w", err)
+	}
+
+	return wouldCycle, nil
+}

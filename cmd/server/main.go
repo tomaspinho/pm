@@ -96,6 +96,9 @@ func main() {
 	// --- Org-scoped routes (auth + membership check) ---
 	org := authed.Group("/orgs/:org_id", middleware.RequireOrgAccess(s))
 
+	// Task search (org-wide).
+	org.Get("/tasks/search", h.HandleSearchTasks)
+
 	// Project creation.
 	org.Get("/projects/new", h.HandleShowCreateProject)
 	org.Post("/projects", h.HandleCreateProject)
@@ -121,6 +124,7 @@ func main() {
 	tasks.Get("/:id/detail", h.HandleTaskDetail)
 	tasks.Patch("/:id", h.HandleUpdateTask)
 	tasks.Patch("/:id/column", h.HandleUpdateColumn)
+	tasks.Get("/:id/dependencies/check", h.HandleCheckDependencyCycle)
 	tasks.Post("/:id/dependencies", h.HandleAddDependency)
 	tasks.Delete("/:id/dependencies/:depID", h.HandleRemoveDependency)
 	tasks.Post("/:id/metadata", h.HandleAddMetadata)
