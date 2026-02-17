@@ -53,7 +53,9 @@ templ BoardPage(project model.Project, columns []model.ProjectColumn, tasksByCol
 					</div>
 				</div>
 			</div>
-			@kanbanScript(project.OrganizationID, project.ID)
+			<!-- Data for kanban script -->
+			<div id="kanban-data" style="display:none" data-org-id={ fmt.Sprintf("%d", project.OrganizationID) } data-project-id={ fmt.Sprintf("%d", project.ID) }></div>
+			@kanbanScript()
 		}
 	}
 }
@@ -112,16 +114,25 @@ templ Column(column model.ProjectColumn, project model.Project, tasks []model.Ta
 	</div>
 }
 
-templ kanbanScript(orgID int64, projectID int64) {
+templ kanbanScript() {
 	<script>
 	(function() {
-		var orgID = { fmt.Sprintf("%d", orgID) };
-		var projectID = { fmt.Sprintf("%d", projectID) };
+		// Load data from data attributes
+		var dataEl = document.getElementById('kanban-data');
+		var orgID = dataEl.getAttribute('data-org-id');
+		var projectID = dataEl.getAttribute('data-project-id');
 
 		function initKanban() {
 			var columns = document.querySelectorAll(".sortable-column");
+			
 			columns.forEach(function(col) {
-				if (col.sortableInstance) return;
+				// Destroy existing instance if it exists (important for htmx OOB swaps)
+				if (col.sortableInstance) {
+					col.sortableInstance.destroy();
+					delete col.sortableInstance;
+				}
+				
+				// Create new Sortable instance
 				col.sortableInstance = new Sortable(col, {
 					group: "kanban",
 					animation: 200,
