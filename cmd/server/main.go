@@ -100,9 +100,13 @@ func main() {
 	org.Get("/projects/new", h.HandleShowCreateProject)
 	org.Post("/projects", h.HandleCreateProject)
 
-	// Column setup.
+	// Column setup (for new projects).
 	org.Get("/projects/:project_id/columns/setup", h.HandleShowColumnSetup)
 	org.Post("/projects/:project_id/columns/setup", h.HandleSaveColumnSetup)
+
+	// Project settings (column management for existing projects).
+	org.Get("/projects/:project_id/settings", h.HandleShowColumnSetup)
+	org.Post("/projects/:project_id/settings", h.HandleSaveColumnSetup)
 
 	// Board view.
 	org.Get("/projects/:project_id", h.HandleBoard)

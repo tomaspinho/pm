@@ -5,7 +5,6 @@ import (
 	"strconv"
 
 	"pm/internal/middleware"
-	"pm/internal/model"
 	"pm/views"
 
 	"github.com/gofiber/fiber/v3"
@@ -173,10 +172,19 @@ func (h *Handler) HandleShowColumnSetup(c fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusNotFound, "project not found")
 	}
 
-	// Check if columns already exist.
+	// Load existing columns (may be empty for new projects).
 	existingColumns, err := h.store.GetProjectColumns(c.Context(), projectID)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to load columns")
+	}
+
+	// Get task counts for each column.
+	taskCounts := make(map[int64]int)
+	for _, col := range existingColumns {
+		count, err := h.store.CountColumnTasks(c.Context(), col.ID)
+		if err == nil {
+			taskCounts[col.ID] = count
+		}
 	}
 
 	// Get user's organizations for nav.
@@ -191,11 +199,12 @@ func (h *Handler) HandleShowColumnSetup(c fiber.Ctx) error {
 		CurrentOrgID: orgID,
 	}
 
-	return render(c, views.ColumnSetupPage(project, orgID, existingColumns, nav))
+	return render(c, views.ColumnSetupPage(project, orgID, existingColumns, taskCounts, nav))
 }
 
 // HandleSaveColumnSetup processes the column setup form.
 // POST /orgs/:org_id/projects/:project_id/columns/setup
+// POST /orgs/:org_id/projects/:project_id/settings
 func (h *Handler) HandleSaveColumnSetup(c fiber.Ctx) error {
 	orgID, err := strconv.ParseInt(c.Params("org_id"), 10, 64)
 	if err != nil {
@@ -208,36 +217,45 @@ func (h *Handler) HandleSaveColumnSetup(c fiber.Ctx) error {
 	}
 
 	// Parse form data - columns come as indexed form values.
-	// Expected format: columns[0][name], columns[0][color], columns[1][name], etc.
-
-	// Build columns from form data.
-	var columns []struct {
+	// Expected format: columns[0][name], columns[0][color], columns[0][id] (optional)
+	type columnUpdate struct {
+		ID    *int64
 		Name  string
 		Color string
 		Pos   int
 	}
 
+	var columns []columnUpdate
+
 	// Parse columns from form values.
 	for i := 0; ; i++ {
 		nameKey := fmt.Sprintf("columns[%d][name]", i)
 		colorKey := fmt.Sprintf("columns[%d][color]", i)
+		idKey := fmt.Sprintf("columns[%d][id]", i)
 
 		name := c.FormValue(nameKey)
-		color := c.FormValue(colorKey)
-
 		if name == "" {
 			break // No more columns.
 		}
 
-		columns = append(columns, struct {
-			Name  string
-			Color string
-			Pos   int
-		}{
+		color := c.FormValue(colorKey)
+		idStr := c.FormValue(idKey)
+
+		col := columnUpdate{
 			Name:  name,
 			Color: color,
 			Pos:   i,
-		})
+		}
+
+		// If ID exists, this is an update to existing column.
+		if idStr != "" {
+			id, err := strconv.ParseInt(idStr, 10, 64)
+			if err == nil {
+				col.ID = &id
+			}
+		}
+
+		columns = append(columns, col)
 	}
 
 	// Validate: at least 1 column required.
@@ -254,20 +272,78 @@ func (h *Handler) HandleSaveColumnSetup(c fiber.Ctx) error {
 		nameSet[col.Name] = true
 	}
 
-	// Convert to model.ProjectColumn slice.
-	var modelColumns []model.ProjectColumn
-	for _, col := range columns {
-		modelColumns = append(modelColumns, model.ProjectColumn{
-			Name:     col.Name,
-			Color:    col.Color,
-			Position: col.Pos,
-		})
+	// Get existing columns to determine what to delete.
+	existingColumns, err := h.store.GetProjectColumns(c.Context(), projectID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to load existing columns")
 	}
 
-	// Create columns in database.
-	err = h.store.CreateProjectColumns(c.Context(), projectID, modelColumns)
-	if err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, "failed to create columns")
+	// Build map of column IDs from form.
+	formColumnIDs := make(map[int64]bool)
+	for _, col := range columns {
+		if col.ID != nil {
+			formColumnIDs[*col.ID] = true
+		}
+	}
+
+	// Process deletions for columns not in form.
+	for _, existing := range existingColumns {
+		if !formColumnIDs[existing.ID] {
+			// This column was deleted - check for target column.
+			deleteKey := fmt.Sprintf("delete_column_%d", existing.ID)
+			targetStr := c.FormValue(deleteKey)
+
+			if targetStr != "" {
+				targetID, err := strconv.ParseInt(targetStr, 10, 64)
+				if err == nil {
+					// Delete column with task migration.
+					err = h.store.DeleteProjectColumn(c.Context(), existing.ID, targetID)
+					if err != nil {
+						return fiber.NewError(fiber.StatusInternalServerError, fmt.Sprintf("failed to delete column: %v", err))
+					}
+				}
+			} else {
+				// Empty column, delete without migration.
+				// Use first remaining column as dummy target (tasks will be 0 anyway).
+				if len(columns) > 0 && columns[0].ID != nil {
+					err = h.store.DeleteProjectColumn(c.Context(), existing.ID, *columns[0].ID)
+					if err != nil {
+						return fiber.NewError(fiber.StatusInternalServerError, fmt.Sprintf("failed to delete column: %v", err))
+					}
+				}
+			}
+		}
+	}
+
+	// Process updates and creates.
+	for _, col := range columns {
+		if col.ID != nil {
+			// Update existing column.
+			err = h.store.UpdateProjectColumn(c.Context(), *col.ID, col.Name, col.Color)
+			if err != nil {
+				return fiber.NewError(fiber.StatusInternalServerError, fmt.Sprintf("failed to update column: %v", err))
+			}
+		} else {
+			// Create new column.
+			_, err = h.store.CreateProjectColumn(c.Context(), projectID, col.Name, col.Color)
+			if err != nil {
+				return fiber.NewError(fiber.StatusInternalServerError, fmt.Sprintf("failed to create column: %v", err))
+			}
+		}
+	}
+
+	// Reorder columns based on their positions.
+	var columnIDs []int64
+	for _, col := range columns {
+		if col.ID != nil {
+			columnIDs = append(columnIDs, *col.ID)
+		}
+	}
+	if len(columnIDs) > 0 {
+		err = h.store.ReorderColumns(c.Context(), projectID, columnIDs)
+		if err != nil {
+			return fiber.NewError(fiber.StatusInternalServerError, "failed to reorder columns")
+		}
 	}
 
 	// Redirect to the project board.
