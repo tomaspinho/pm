@@ -92,9 +92,13 @@ func main() {
 	authed.Post("/logout", h.HandleLogout)
 	authed.Get("/", h.HandleLandingPage)
 	authed.Get("/projects", h.HandleProjectPicker)
+	authed.Patch("/profile", h.HandleUpdateProfile)
 
 	// --- Org-scoped routes (auth + membership check) ---
 	org := authed.Group("/orgs/:org_id", middleware.RequireOrgAccess(s))
+
+	// Organization member listing.
+	org.Get("/members", h.HandleGetOrgMembers)
 
 	// Task search (org-wide).
 	org.Get("/tasks/search", h.HandleSearchTasks)
@@ -127,6 +131,8 @@ func main() {
 	tasks.Get("/:id/dependencies/check", h.HandleCheckDependencyCycle)
 	tasks.Post("/:id/dependencies", h.HandleAddDependency)
 	tasks.Delete("/:id/dependencies/:depID", h.HandleRemoveDependency)
+	tasks.Post("/:id/assign-self", h.HandleAssignSelf)
+	tasks.Delete("/:id/assignees/:user_id", h.HandleUnassign)
 	tasks.Post("/:id/metadata", h.HandleAddMetadata)
 	tasks.Patch("/:id/metadata/:oldKey", h.HandleUpdateMetadata)
 	tasks.Delete("/:id/metadata/:key", h.HandleDeleteMetadata)

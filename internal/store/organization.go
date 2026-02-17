@@ -98,3 +98,20 @@ func (s *Store) RemoveMember(ctx context.Context, orgID, userID int64) error {
 	}
 	return nil
 }
+
+// GetOrganizationMembers returns all active members of an organization.
+func (s *Store) GetOrganizationMembers(ctx context.Context, orgID int64) ([]model.User, error) {
+	var users []model.User
+	err := s.db.SelectContext(ctx, &users, `
+		SELECT u.* FROM users u
+		INNER JOIN organization_members om ON u.id = om.user_id
+		WHERE om.organization_id = $1 
+		  AND om.deleted_at IS NULL 
+		  AND u.deleted_at IS NULL
+		ORDER BY u.display_name, u.email
+	`, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("getting organization members: %w", err)
+	}
+	return users, nil
+}

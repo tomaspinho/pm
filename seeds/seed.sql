@@ -3,9 +3,12 @@
 -- Run with: mise run db:seed
 
 -- Default user (password: changeme123)
-INSERT INTO users (id, email, password_hash)
-VALUES (1, 'admin@example.com', '$2a$12$r61zoAW6/P0GJSm2cnx7X.2Cbv2H1J0jxkR4qZ/PMBa08p9vY/aJS')
-ON CONFLICT (id) DO NOTHING;
+-- Note: display_name is required now, updating existing user
+UPDATE users SET display_name = 'Admin User' WHERE id = 1 AND (display_name = '' OR display_name = 'admin');
+
+INSERT INTO users (id, email, password_hash, display_name)
+VALUES (1, 'admin@example.com', '$2a$12$r61zoAW6/P0GJSm2cnx7X.2Cbv2H1J0jxkR4qZ/PMBa08p9vY/aJS', 'Admin User')
+ON CONFLICT (id) DO UPDATE SET display_name = EXCLUDED.display_name;
 
 -- Default organization for the user
 INSERT INTO organizations (id, name, owner_user_id)
@@ -169,6 +172,22 @@ VALUES
     (198, 2, 'Set up domain and DNS', 'Purchase domain and configure nameservers', 6, 23, 'devops@example.com', '{"priority": "high"}'),
     (199, 2, 'Create sprint planning template', 'Agile workflow and sprint structure', 6, 24, 'manager@example.com', '{"priority": "low"}')
 ON CONFLICT (id) DO NOTHING;
+
+-- Sample task assignments (assign admin user to some tasks)
+INSERT INTO task_assignees (task_id, user_id)
+VALUES
+    -- Assign to tasks in project 1
+    (1, 1),  -- CI pipeline
+    (3, 1),  -- User auth
+    -- Assign to several tasks in project 2
+    (100, 1), -- Product catalog
+    (102, 1), -- Payment gateway
+    (105, 1), -- Search functionality
+    (140, 1), -- REST API
+    (145, 1), -- Authentication flow
+    (175, 1), -- Set up repo
+    (176, 1)  -- Choose tech stack
+ON CONFLICT (task_id, user_id) DO NOTHING;
 
 -- Reset sequences to avoid conflicts with future inserts.
 SELECT setval('users_id_seq', (SELECT COALESCE(MAX(id), 0) FROM users));

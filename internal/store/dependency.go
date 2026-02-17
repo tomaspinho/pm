@@ -96,6 +96,13 @@ func (s *Store) GetTaskWithDependencies(ctx context.Context, taskID int64) (*mod
 	}
 	result.CommentCount = count
 
+	// Get assignees
+	assignees, err := s.GetTaskAssignees(ctx, taskID)
+	if err != nil {
+		return nil, fmt.Errorf("getting assignees: %w", err)
+	}
+	result.Assignees = assignees
+
 	return result, nil
 }
 

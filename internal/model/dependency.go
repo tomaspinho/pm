@@ -17,4 +17,5 @@ type TaskWithDependencies struct {
 	HasCycle     bool             `db:"-" json:"has_cycle"`     // Whether a circular dependency exists
 	CyclePath    []int64          `db:"-" json:"cycle_path"`    // The path of the cycle if it exists
 	CommentCount int              `db:"-" json:"comment_count"` // Number of non-deleted comments
+	Assignees    []AssigneeInfo   `db:"-" json:"assignees"`     // Users assigned to this task
 }

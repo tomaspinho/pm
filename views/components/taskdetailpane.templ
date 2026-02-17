@@ -293,6 +293,8 @@ templ TaskDetailPane(taskWithDeps model.TaskWithDependencies, orgID int64, proje
 						</form>
 					</div>
 				</div>
+				<!-- Assignees -->
+				@AssigneeSection(taskWithDeps.ID, taskWithDeps.Assignees, orgID, taskWithDeps.ProjectID, *currentUser)
 				<!-- Due Date -->
 				<div class="space-y-2">
 					<label class="block text-xs font-medium text-gray-500 uppercase tracking-wide">Due Date</label>

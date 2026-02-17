@@ -8,12 +8,12 @@ import (
 	"pm/internal/model"
 )
 
-// CreateUser inserts a new user.
-func (s *Store) CreateUser(ctx context.Context, email, passwordHash string) (*model.User, error) {
+// CreateUser inserts a new user with email, password hash, and display name.
+func (s *Store) CreateUser(ctx context.Context, email, passwordHash, displayName string) (*model.User, error) {
 	var user model.User
 	err := s.db.GetContext(ctx, &user,
-		`INSERT INTO users (email, password_hash) VALUES ($1, $2) RETURNING *`,
-		email, passwordHash)
+		`INSERT INTO users (email, password_hash, display_name) VALUES ($1, $2, $3) RETURNING *`,
+		email, passwordHash, displayName)
 	if err != nil {
 		return nil, fmt.Errorf("creating user: %w", err)
 	}
@@ -49,6 +49,17 @@ func (s *Store) UpdateLastViewedProject(ctx context.Context, userID, projectID i
 		projectID, time.Now(), userID)
 	if err != nil {
 		return fmt.Errorf("updating last viewed project: %w", err)
+	}
+	return nil
+}
+
+// UpdateUserDisplayName updates a user's display name.
+func (s *Store) UpdateUserDisplayName(ctx context.Context, userID int64, displayName string) error {
+	_, err := s.db.ExecContext(ctx,
+		`UPDATE users SET display_name = $1, updated_at = NOW() WHERE id = $2`,
+		displayName, userID)
+	if err != nil {
+		return fmt.Errorf("updating user display name: %w", err)
 	}
 	return nil
 }

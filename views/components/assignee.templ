@@ -1,0 +1,87 @@
+package components
+
+import (
+	"pm/internal/model"
+	"fmt"
+)
+
+// AssigneeSection renders the complete assignee section for a task (for htmx swaps)
+templ AssigneeSection(taskID int64, assignees []model.AssigneeInfo, orgID int64, projectID int64, currentUser model.User) {
+	<div class="space-y-2" id={ "assignee-section-" + fmt.Sprintf("%d", taskID) }>
+		<label class="block text-xs font-medium text-gray-500 uppercase tracking-wide">
+			Assignees
+		</label>
+		@AssigneeList(taskID, assignees, orgID, projectID, currentUser)
+		<button
+			type="button"
+			hx-post={ fmt.Sprintf("/orgs/%d/projects/%d/tasks/%d/assign-self", orgID, projectID, taskID) }
+			hx-target={ "#assignee-section-" + fmt.Sprintf("%d", taskID) }
+			hx-swap="outerHTML"
+			class="text-sm font-medium text-indigo-600 hover:text-indigo-700 cursor-pointer"
+		>
+			+ Assign Me
+		</button>
+	</div>
+}
+
+// AssigneeList renders the list of assignees with remove buttons
+templ AssigneeList(taskID int64, assignees []model.AssigneeInfo, orgID int64, projectID int64, currentUser model.User) {
+	if len(assignees) > 0 {
+		<div class="space-y-1.5">
+			for _, assignee := range assignees {
+				<div class="group flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg border border-gray-200">
+					@AssigneeBadge(assignee)
+					<button
+						type="button"
+						class="ml-auto opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-red-500"
+						hx-delete={ fmt.Sprintf("/orgs/%d/projects/%d/tasks/%d/assignees/%d", orgID, projectID, taskID, assignee.UserID) }
+						hx-target={ "#assignee-section-" + fmt.Sprintf("%d", taskID) }
+						hx-swap="outerHTML"
+						hx-confirm={ getUnassignConfirmMessage(assignee, currentUser) }
+					>
+						<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+						</svg>
+					</button>
+				</div>
+			}
+		</div>
+	} else {
+		<p class="text-sm text-gray-400 italic">No assignees</p>
+	}
+}
+
+// AssigneeBadge renders a single assignee badge with avatar and display name
+templ AssigneeBadge(assignee model.AssigneeInfo) {
+	<div class="flex items-center gap-2">
+		<span
+			class="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-medium flex-shrink-0"
+			style={ "background-color: " + assignee.AvatarColor() }
+			title={ assignee.Email }
+		>
+			{ assignee.Initials() }
+		</span>
+		<span class="text-sm font-medium text-gray-900">
+			{ assignee.DisplayName }
+		</span>
+	</div>
+}
+
+// AssigneeBadgeSmall renders a smaller version for kanban cards
+templ AssigneeBadgeSmall(assignee model.AssigneeInfo) {
+	<span
+		class="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-medium"
+		style={ "background-color: " + assignee.AvatarColor() }
+		title={ assignee.DisplayName + " (" + assignee.Email + ")" }
+	>
+		{ assignee.Initials() }
+	</span>
+}
+
+// Helper function to generate appropriate unassign confirmation message
+func getUnassignConfirmMessage(assignee model.AssigneeInfo, currentUser model.User) string {
+	if assignee.UserID == currentUser.ID {
+		return "Unassign yourself from this task?"
+	}
+	return fmt.Sprintf("Unassign %s from this task?", assignee.DisplayName)
+}

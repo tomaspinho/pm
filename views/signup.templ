@@ -16,13 +16,25 @@ templ SignupPage(errorMsg string) {
 					}
 					<form method="POST" action="/signup" class="space-y-4">
 						<div class="space-y-1">
+							<label for="display_name" class="block text-sm font-medium text-gray-700">Display Name</label>
+							<input
+								type="text"
+								id="display_name"
+								name="display_name"
+								required
+								autofocus
+								placeholder="John Doe"
+								maxlength="100"
+								class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+							/>
+						</div>
+						<div class="space-y-1">
 							<label for="email" class="block text-sm font-medium text-gray-700">Email</label>
 							<input
 								type="email"
 								id="email"
 								name="email"
 								required
-								autofocus
 								placeholder="you@example.com"
 								class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
 							/>

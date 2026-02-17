@@ -83,6 +83,12 @@ func (h *Handler) HandleSignup(c fiber.Ctx) error {
 	email := strings.TrimSpace(c.FormValue("email"))
 	password := c.FormValue("password")
 	passwordConfirm := c.FormValue("password_confirm")
+	displayName := strings.TrimSpace(c.FormValue("display_name"))
+
+	// Validate display name.
+	if len(displayName) == 0 || len(displayName) > 100 {
+		return render(c, views.SignupPage("Display name must be between 1 and 100 characters."))
+	}
 
 	// Validate email.
 	email, err := auth.ValidateEmail(email)
@@ -112,7 +118,7 @@ func (h *Handler) HandleSignup(c fiber.Ctx) error {
 	}
 
 	// Create user.
-	user, err := h.store.CreateUser(c.Context(), email, hash)
+	user, err := h.store.CreateUser(c.Context(), email, hash, displayName)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to create user")
 	}

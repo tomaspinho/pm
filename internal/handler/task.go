@@ -365,6 +365,91 @@ func (h *Handler) HandleCheckDependencyCycle(c fiber.Ctx) error {
 	})
 }
 
+// HandleAssignSelf assigns the current user to a task.
+// POST /orgs/:org_id/projects/:project_id/tasks/:id/assign-self
+func (h *Handler) HandleAssignSelf(c fiber.Ctx) error {
+	currentUser, err := middleware.GetCurrentUser(c)
+	if err != nil {
+		return err
+	}
+
+	orgID, projectID, err := parseOrgAndProject(c)
+	if err != nil {
+		return err
+	}
+
+	taskID, err := strconv.ParseInt(c.Params("id"), 10, 64)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "invalid task id")
+	}
+
+	// Assign user to task
+	err = h.store.AssignUserToTask(c.Context(), taskID, currentUser.ID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to assign user")
+	}
+
+	// Get updated task with dependencies (includes assignees)
+	taskWithDeps, err := h.store.GetTaskWithDependencies(c.Context(), taskID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to get task")
+	}
+
+	// Return the updated assignee section for htmx swap
+	return render(c, components.AssigneeSection(taskWithDeps.ID, taskWithDeps.Assignees, orgID, projectID, *currentUser))
+}
+
+// HandleUnassign removes a user from a task.
+// DELETE /orgs/:org_id/projects/:project_id/tasks/:id/assignees/:user_id
+func (h *Handler) HandleUnassign(c fiber.Ctx) error {
+	currentUser, err := middleware.GetCurrentUser(c)
+	if err != nil {
+		return err
+	}
+
+	orgID, projectID, err := parseOrgAndProject(c)
+	if err != nil {
+		return err
+	}
+
+	taskID, err := strconv.ParseInt(c.Params("id"), 10, 64)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "invalid task id")
+	}
+
+	userIDToRemove, err := strconv.ParseInt(c.Params("user_id"), 10, 64)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "invalid user id")
+	}
+
+	// Permission check: users can unassign themselves, or org owners can unassign anyone
+	if userIDToRemove != currentUser.ID {
+		// Check if current user is org owner
+		org, err := h.store.GetOrganization(c.Context(), orgID)
+		if err != nil {
+			return fiber.NewError(fiber.StatusInternalServerError, "failed to get organization")
+		}
+		if org.OwnerUserID != currentUser.ID {
+			return fiber.NewError(fiber.StatusForbidden, "only org owners can unassign others")
+		}
+	}
+
+	// Unassign user from task
+	err = h.store.UnassignUserFromTask(c.Context(), taskID, userIDToRemove)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to unassign user")
+	}
+
+	// Get updated task with dependencies (includes assignees)
+	taskWithDeps, err := h.store.GetTaskWithDependencies(c.Context(), taskID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to get task")
+	}
+
+	// Return the updated assignee section for htmx swap
+	return render(c, components.AssigneeSection(taskWithDeps.ID, taskWithDeps.Assignees, orgID, projectID, *currentUser))
+}
+
 // HandleAddMetadata adds a metadata key-value pair.
 // POST /orgs/:org_id/projects/:project_id/tasks/:id/metadata
 func (h *Handler) HandleAddMetadata(c fiber.Ctx) error {
