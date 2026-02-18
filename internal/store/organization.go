@@ -115,3 +115,52 @@ func (s *Store) GetOrganizationMembers(ctx context.Context, orgID int64) ([]mode
 	}
 	return users, nil
 }
+
+// SearchOrganizationMembers searches for members in an organization by display name or email.
+// Returns up to 'limit' results ordered by relevance (trigram similarity).
+func (s *Store) SearchOrganizationMembers(ctx context.Context, orgID int64, query string, excludeUserID int64, limit int) ([]model.User, error) {
+	var users []model.User
+
+	// If query is empty, return recent members (excluding the specified user)
+	if query == "" {
+		err := s.db.SelectContext(ctx, &users, `
+			SELECT u.* FROM users u
+			INNER JOIN organization_members om ON u.id = om.user_id
+			WHERE om.organization_id = $1 
+			  AND u.id != $2
+			  AND om.deleted_at IS NULL 
+			  AND u.deleted_at IS NULL
+			ORDER BY u.updated_at DESC
+			LIMIT $3
+		`, orgID, excludeUserID, limit)
+		if err != nil {
+			return nil, fmt.Errorf("getting recent organization members: %w", err)
+		}
+		return users, nil
+	}
+
+	// Search by display name or email using trigram similarity
+	err := s.db.SelectContext(ctx, &users, `
+		SELECT u.* FROM users u
+		INNER JOIN organization_members om ON u.id = om.user_id
+		WHERE om.organization_id = $1 
+		  AND u.id != $2
+		  AND om.deleted_at IS NULL 
+		  AND u.deleted_at IS NULL
+		  AND (
+		    u.display_name ILIKE '%' || $3 || '%'
+		    OR u.email ILIKE '%' || $3 || '%'
+		  )
+		ORDER BY 
+		  GREATEST(
+		    similarity(u.display_name, $3),
+		    similarity(u.email, $3)
+		  ) DESC,
+		  u.display_name
+		LIMIT $4
+	`, orgID, excludeUserID, query, limit)
+	if err != nil {
+		return nil, fmt.Errorf("searching organization members: %w", err)
+	}
+	return users, nil
+}

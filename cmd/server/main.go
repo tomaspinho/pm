@@ -103,6 +103,9 @@ func main() {
 	// Task search (org-wide).
 	org.Get("/tasks/search", h.HandleSearchTasks)
 
+	// User search (org-wide).
+	org.Get("/users/search", h.HandleSearchUsers)
+
 	// Project creation.
 	org.Get("/projects/new", h.HandleShowCreateProject)
 	org.Post("/projects", h.HandleCreateProject)
@@ -132,6 +135,7 @@ func main() {
 	tasks.Post("/:id/dependencies", h.HandleAddDependency)
 	tasks.Delete("/:id/dependencies/:depID", h.HandleRemoveDependency)
 	tasks.Post("/:id/assign-self", h.HandleAssignSelf)
+	tasks.Post("/:id/assignees/:user_id", h.HandleAssignUser)
 	tasks.Delete("/:id/assignees/:user_id", h.HandleUnassign)
 	tasks.Post("/:id/metadata", h.HandleAddMetadata)
 	tasks.Patch("/:id/metadata/:oldKey", h.HandleUpdateMetadata)

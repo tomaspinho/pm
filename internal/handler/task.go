@@ -450,6 +450,91 @@ func (h *Handler) HandleUnassign(c fiber.Ctx) error {
 	return render(c, components.AssigneeSection(taskWithDeps.ID, taskWithDeps.Assignees, orgID, projectID, *currentUser))
 }
 
+// HandleSearchUsers searches for users in an organization
+// GET /orgs/:org_id/users/search?q=query
+func (h *Handler) HandleSearchUsers(c fiber.Ctx) error {
+	orgID, err := strconv.ParseInt(c.Params("org_id"), 10, 64)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "invalid org id")
+	}
+
+	query := c.Query("q", "")
+	limit := 20
+
+	// Search for users (include current user - they can see themselves in the list)
+	// Pass 0 as excludeUserID to include everyone
+	users, err := h.store.SearchOrganizationMembers(c.Context(), orgID, query, 0, limit)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to search users")
+	}
+
+	// Convert to response format
+	type userSearchResult struct {
+		ID          int64  `json:"id"`
+		Email       string `json:"email"`
+		DisplayName string `json:"display_name"`
+	}
+
+	results := make([]userSearchResult, len(users))
+	for i, u := range users {
+		results[i] = userSearchResult{
+			ID:          u.ID,
+			Email:       u.Email,
+			DisplayName: u.DisplayName,
+		}
+	}
+
+	return c.JSON(results)
+}
+
+// HandleAssignUser assigns a user to a task.
+// POST /orgs/:org_id/projects/:project_id/tasks/:id/assignees/:user_id
+func (h *Handler) HandleAssignUser(c fiber.Ctx) error {
+	currentUser, err := middleware.GetCurrentUser(c)
+	if err != nil {
+		return err
+	}
+
+	orgID, projectID, err := parseOrgAndProject(c)
+	if err != nil {
+		return err
+	}
+
+	taskID, err := strconv.ParseInt(c.Params("id"), 10, 64)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "invalid task id")
+	}
+
+	userIDToAssign, err := strconv.ParseInt(c.Params("user_id"), 10, 64)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "invalid user id")
+	}
+
+	// Verify the user is a member of the organization
+	isMember, err := h.store.IsMember(c.Context(), orgID, userIDToAssign)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to verify membership")
+	}
+	if !isMember {
+		return fiber.NewError(fiber.StatusBadRequest, "user is not a member of this organization")
+	}
+
+	// Assign user to task
+	err = h.store.AssignUserToTask(c.Context(), taskID, userIDToAssign)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to assign user")
+	}
+
+	// Get updated task with dependencies (includes assignees)
+	taskWithDeps, err := h.store.GetTaskWithDependencies(c.Context(), taskID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to get task")
+	}
+
+	// Return the updated assignee section for htmx swap
+	return render(c, components.AssigneeSection(taskWithDeps.ID, taskWithDeps.Assignees, orgID, projectID, *currentUser))
+}
+
 // HandleAddMetadata adds a metadata key-value pair.
 // POST /orgs/:org_id/projects/:project_id/tasks/:id/metadata
 func (h *Handler) HandleAddMetadata(c fiber.Ctx) error {
