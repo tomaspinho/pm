@@ -114,9 +114,9 @@ func (s *Store) detectCircularDependency(ctx context.Context, taskID int64) (boo
 			SELECT task_id, depends_on_id, ARRAY[task_id, depends_on_id] AS path, 1 AS depth
 			FROM task_dependencies
 			WHERE task_id = $1
-			
+
 			UNION ALL
-			
+
 			-- Follow the dependency chain
 			SELECT td.task_id, td.depends_on_id, dc.path || td.depends_on_id, dc.depth + 1
 			FROM task_dependencies td

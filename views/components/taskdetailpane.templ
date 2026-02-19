@@ -75,9 +75,9 @@ func formatDueDate(task model.Task) string {
 	if task.DueDate == nil {
 		return "No due date"
 	}
-	
+
 	formatted := task.DueDate.Format("Jan 2, 2006") // "Feb 14, 2026"
-	
+
 	if task.IsOverdue() {
 		return formatted + " (Overdue)"
 	}
@@ -542,31 +542,31 @@ templ DependencySection(taskWithDeps model.TaskWithDependencies, orgID int64) {
 		<script>
 			if (!window.taskAutocompleteInitialized) {
 				window.taskAutocompleteInitialized = true;
-				
+
 				window.initTaskDependencyAutocomplete = function(taskID) {
 					var searchInput = document.getElementById('task-search-' + taskID);
 					var dropdown = document.getElementById('task-dropdown-' + taskID);
 					var hiddenForm = document.getElementById('hidden-dependency-form-' + taskID);
 					var formDiv = document.getElementById('add-dependency-form-' + taskID);
-					
+
 					if (!searchInput || !dropdown || !hiddenForm || !formDiv) {
 						console.error('Required elements not found for taskID:', taskID);
 						return;
 					}
-					
+
 					var orgID = formDiv.dataset.orgId;
 					var projectID = formDiv.dataset.projectId;
-					
+
 					var debounceTimer;
 					var selectedIndex = -1;
 					var currentResults = [];
-					
+
 					// Load recent tasks on init
 					loadTasks('');
-					
+
 					function loadTasks(query) {
 						var url = '/orgs/' + orgID + '/tasks/search?q=' + encodeURIComponent(query) + '&exclude=' + taskID;
-						
+
 						fetch(url)
 							.then(function(response) { return response.json(); })
 							.then(function(results) {
@@ -580,14 +580,14 @@ templ DependencySection(taskWithDeps model.TaskWithDependencies, orgID int64) {
 								dropdown.classList.remove('hidden');
 							});
 					}
-					
+
 					function renderDropdown(results, query) {
 						if (!results || results.length === 0) {
 							dropdown.innerHTML = '<div class="px-4 py-3 text-sm text-gray-500 italic">No tasks found</div>';
 							dropdown.classList.remove('hidden');
 							return;
 						}
-						
+
 						var html = '';
 						results.forEach(function(task, index) {
 							var isCurrentProject = task.project_id.toString() === projectID;
@@ -595,7 +595,7 @@ templ DependencySection(taskWithDeps model.TaskWithDependencies, orgID int64) {
 								? 'bg-indigo-50 hover:bg-indigo-100'
 								: 'bg-gray-100 hover:bg-gray-200';
 							var activeClass = index === selectedIndex ? 'ring-2 ring-indigo-500' : '';
-							
+
 							html += '<button type="button" class="w-full text-left px-4 py-3 ' + bgClass + ' ' + activeClass + ' transition-colors border-b border-gray-200 last:border-b-0 cursor-pointer" data-task-id="' + task.id + '" data-index="' + index + '">';
 							html += '  <div class="flex items-center gap-2 mb-1">';
 							html += '    <span class="w-2 h-2 rounded-full flex-shrink-0" style="background-color: ' + task.column_color + '" title="' + task.column_name + '"></span>';
@@ -609,10 +609,10 @@ templ DependencySection(taskWithDeps model.TaskWithDependencies, orgID int64) {
 							}
 							html += '</button>';
 						});
-						
+
 						dropdown.innerHTML = html;
 						dropdown.classList.remove('hidden');
-						
+
 						// Add click handlers to dropdown items
 						dropdown.querySelectorAll('button[data-task-id]').forEach(function(btn) {
 							btn.addEventListener('click', function() {
@@ -620,17 +620,17 @@ templ DependencySection(taskWithDeps model.TaskWithDependencies, orgID int64) {
 							});
 						});
 					}
-					
+
 					function escapeHtml(text) {
 						var div = document.createElement('div');
 						div.textContent = text;
 						return div.innerHTML;
 					}
-					
+
 					function selectTask(taskId) {
 						// Check for circular dependency
 						var checkUrl = '/orgs/' + orgID + '/projects/' + projectID + '/tasks/' + taskID + '/dependencies/check?depends_on=' + taskId;
-						
+
 						fetch(checkUrl)
 							.then(function(response) { return response.json(); })
 							.then(function(data) {
@@ -638,12 +638,12 @@ templ DependencySection(taskWithDeps model.TaskWithDependencies, orgID int64) {
 									alert('Cannot add this dependency: it would create a circular dependency chain.');
 									return;
 								}
-								
+
 								// Submit the form
 								var hiddenInput = hiddenForm.querySelector('input[name="depends_on_id"]');
 								hiddenInput.value = taskId;
 								htmx.trigger(hiddenForm, 'submit');
-								
+
 								// Close the form
 								var cancelBtn = formDiv.querySelector('button[onclick*="toggleAddDependencyForm"]');
 								if (cancelBtn) cancelBtn.click();
@@ -653,20 +653,20 @@ templ DependencySection(taskWithDeps model.TaskWithDependencies, orgID int64) {
 								alert('Failed to add dependency. Please try again.');
 							});
 					}
-					
+
 					// Search input event handlers
 					searchInput.addEventListener('input', function(e) {
 						clearTimeout(debounceTimer);
 						var query = e.target.value.trim();
-						
+
 						debounceTimer = setTimeout(function() {
 							loadTasks(query);
 						}, 300);
 					});
-					
+
 					searchInput.addEventListener('keydown', function(e) {
 						if (dropdown.classList.contains('hidden')) return;
-						
+
 						if (e.key === 'ArrowDown') {
 							e.preventDefault();
 							selectedIndex = Math.min(selectedIndex + 1, currentResults.length - 1);
@@ -687,7 +687,7 @@ templ DependencySection(taskWithDeps model.TaskWithDependencies, orgID int64) {
 							dropdown.classList.add('hidden');
 						}
 					});
-					
+
 					// Close dropdown when clicking outside
 					document.addEventListener('click', function(e) {
 						if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) {
@@ -772,7 +772,7 @@ script showEditField(field string) {
 	document.getElementById(fieldSplitted[0] + '-display-' + fieldSplitted[1]).classList.add('hidden');
 	var formElement = document.getElementById(fieldSplitted[0] + '-form-' + fieldSplitted[1]);
 	formElement.classList.remove('hidden');
-	
+
 	// Focus the first input/textarea in the form
 	var input = formElement.querySelector('input[type="text"], input[type="date"], textarea');
 	if (input) {
@@ -801,7 +801,7 @@ script toggleAddDependencyForm(taskID string) {
 	var form = document.getElementById('add-dependency-form-' + taskID);
 	var searchInput = document.getElementById('task-search-' + taskID);
 	var dropdown = document.getElementById('task-dropdown-' + taskID);
-	
+
 	if (form.classList.contains('hidden')) {
 		form.classList.remove('hidden');
 		// Initialize autocomplete when form is shown
@@ -842,7 +842,7 @@ script toggleAddMetadataForm(taskID string) {
 script toggleStatusDropdown(taskID string) {
 	var dropdown = document.getElementById('status-dropdown-' + taskID);
 	dropdown.classList.toggle('hidden');
-	
+
 	// Close dropdown when clicking outside
 	function closeOnClickOutside(e) {
 		if (!dropdown.contains(e.target) && !e.target.closest('button[onclick*="toggleStatusDropdown"]')) {
@@ -850,7 +850,7 @@ script toggleStatusDropdown(taskID string) {
 			document.removeEventListener('click', closeOnClickOutside);
 		}
 	}
-	
+
 	if (!dropdown.classList.contains('hidden')) {
 		// Use setTimeout to avoid immediate closure from the same click
 		setTimeout(function() {
@@ -865,7 +865,7 @@ templ detailPaneScript() {
 	(function() {
 		var pane = document.getElementById('detail-pane');
 		if (!pane) return;
-		
+
 		// Close on Escape key
 		function handleEscape(e) {
 			if (e.key === 'Escape') {
@@ -874,7 +874,7 @@ templ detailPaneScript() {
 			}
 		}
 		document.addEventListener('keydown', handleEscape);
-		
+
 		// Close on backdrop click
 		pane.addEventListener('click', function(e) {
 			if (e.target === pane) {
@@ -882,7 +882,7 @@ templ detailPaneScript() {
 				document.removeEventListener('keydown', handleEscape);
 			}
 		});
-		
+
 		// Handle metadata edit/cancel with data attributes
 		pane.addEventListener('click', function(e) {
 			var target = e.target.closest('[data-show-edit]');
@@ -897,7 +897,7 @@ templ detailPaneScript() {
 				}
 				return;
 			}
-			
+
 			target = e.target.closest('[data-cancel-edit]');
 			if (target) {
 				var displayId = target.getAttribute('data-cancel-edit');
@@ -910,7 +910,7 @@ templ detailPaneScript() {
 				}
 			}
 		});
-		
+
 		// Handle form toggle buttons with data-toggle-form attribute
 		pane.addEventListener('click', function(e) {
 			var button = e.target.closest('[data-toggle-form]');

@@ -162,9 +162,9 @@ templ confirmModalScript() {
 			// Task delete confirmation
 			if (evt.target.hasAttribute('data-confirm-delete')) {
 				evt.preventDefault();
-				
+
 				var modal = document.getElementById('modal-container');
-				
+
 				// Create modal HTML
 				modal.innerHTML = `
 					<div class="modal-backdrop fixed inset-0 bg-gray-900/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
@@ -191,25 +191,25 @@ templ confirmModalScript() {
 						</div>
 					</div>
 				`;
-				
+
 				// Handle delete confirmation
 				modal.querySelector('.btn-delete').onclick = function() {
 					modal.innerHTML = '';
 					evt.detail.issueRequest();
 				};
-				
+
 				// Handle cancel
 				modal.querySelector('.btn-cancel').onclick = function() {
 					modal.innerHTML = '';
 				};
-				
+
 				// Close on backdrop click
 				modal.querySelector('.modal-backdrop').onclick = function(e) {
 					if (e.target === e.currentTarget) {
 						modal.innerHTML = '';
 					}
 				};
-				
+
 				// Close on Escape key
 				function handleEscape(e) {
 					if (e.key === 'Escape') {
@@ -219,13 +219,13 @@ templ confirmModalScript() {
 				}
 				document.addEventListener('keydown', handleEscape);
 			}
-			
+
 			// Comment delete confirmation
 			if (evt.target.hasAttribute('data-confirm-delete-comment')) {
 				evt.preventDefault();
-				
+
 				var modal = document.getElementById('modal-container');
-				
+
 				modal.innerHTML = `
 					<div class="modal-backdrop fixed inset-0 bg-gray-900/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
 						<div class="modal-card bg-white rounded-lg shadow-xl max-w-md w-full p-6 space-y-4">
@@ -251,22 +251,22 @@ templ confirmModalScript() {
 						</div>
 					</div>
 				`;
-				
+
 				modal.querySelector('.btn-delete').onclick = function() {
 					modal.innerHTML = '';
 					evt.detail.issueRequest();
 				};
-				
+
 				modal.querySelector('.btn-cancel').onclick = function() {
 					modal.innerHTML = '';
 				};
-				
+
 				modal.querySelector('.modal-backdrop').onclick = function(e) {
 					if (e.target === e.currentTarget) {
 						modal.innerHTML = '';
 					}
 				};
-				
+
 				function handleEscape(e) {
 					if (e.key === 'Escape') {
 						modal.innerHTML = '';

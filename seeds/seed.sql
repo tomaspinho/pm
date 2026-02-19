@@ -107,7 +107,7 @@ VALUES
     (137, 2, 'Set up backup strategy', 'Automated database backups and recovery', 4, 37, 'devops@example.com', '{"priority": "critical"}'),
     (138, 2, 'Implement GDPR compliance', 'Cookie consent and data export features', 4, 38, 'dev@example.com', '{"priority": "high"}'),
     (139, 2, 'Add accessibility features', 'WCAG 2.1 AA compliance improvements', 4, 39, 'dev@example.com', '{"priority": "medium"}'),
-    
+
     -- Active (35 tasks, column_id = 5)
     (140, 2, 'Build REST API endpoints', 'Core API for products, orders, and users', 5, 0, 'dev@example.com', '{"priority": "critical"}'),
     (141, 2, 'Design homepage layout', 'Hero section and featured products', 5, 1, 'designer@example.com', '{"priority": "high"}'),
@@ -144,7 +144,7 @@ VALUES
     (172, 2, 'Add password reset', 'Forgot password email flow', 5, 32, 'dev@example.com', '{"priority": "high"}'),
     (173, 2, 'Create about us page', 'Company story and team information', 5, 33, 'content@example.com', '{"priority": "low"}'),
     (174, 2, 'Implement notification system', 'Toast messages for user actions', 5, 34, 'dev@example.com', '{"priority": "medium"}'),
-    
+
     -- Completed (25 tasks, column_id = 6)
     (175, 2, 'Set up project repository', 'Initialize Git repo with README', 6, 0, 'dev@example.com', '{"priority": "critical"}'),
     (176, 2, 'Choose tech stack', 'Finalize framework and database choices', 6, 1, 'architect@example.com', '{"priority": "critical"}'),

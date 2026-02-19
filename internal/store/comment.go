@@ -216,9 +216,9 @@ func (s *Store) GetCommentDepth(ctx context.Context, commentID int64) (int, erro
 			SELECT id, parent_id, 0 AS depth
 			FROM task_comments
 			WHERE id = $1
-			
+
 			UNION ALL
-			
+
 			SELECT c.id, c.parent_id, cp.depth + 1
 			FROM task_comments c
 			JOIN comment_path cp ON c.id = cp.parent_id

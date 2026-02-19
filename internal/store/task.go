@@ -427,9 +427,9 @@ func (s *Store) WouldCreateCycle(ctx context.Context, taskID, dependsOnID int64)
 			SELECT task_id, depends_on_id, 1 AS depth
 			FROM task_dependencies
 			WHERE task_id = $1
-			
+
 			UNION ALL
-			
+
 			SELECT td.task_id, td.depends_on_id, dc.depth + 1
 			FROM task_dependencies td
 			INNER JOIN dependency_chain dc ON td.task_id = dc.depends_on_id

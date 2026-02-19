@@ -80,31 +80,31 @@ templ AssigneeSection(taskID int64, assignees []model.AssigneeInfo, orgID int64,
 	<script>
 		if (!window.assigneeAutocompleteInitialized) {
 			window.assigneeAutocompleteInitialized = true;
-			
+
 			window.initUserAssigneeAutocomplete = function(taskID) {
 				var searchInput = document.getElementById('user-search-' + taskID);
 				var dropdown = document.getElementById('user-dropdown-' + taskID);
 				var hiddenForm = document.getElementById('hidden-assignee-form-' + taskID);
 				var formDiv = document.getElementById('add-assignee-form-' + taskID);
-				
+
 				if (!searchInput || !dropdown || !hiddenForm || !formDiv) {
 					console.error('Required elements not found for taskID:', taskID);
 					return;
 				}
-				
+
 				var orgID = formDiv.dataset.orgId;
 				var projectID = formDiv.dataset.projectId;
-				
+
 				var debounceTimer;
 				var selectedIndex = -1;
 				var currentResults = [];
-				
+
 				// Load recent users on init
 				loadUsers('');
-				
+
 				function loadUsers(query) {
 					var url = '/orgs/' + orgID + '/users/search?q=' + encodeURIComponent(query);
-					
+
 					fetch(url)
 						.then(function(response) { return response.json(); })
 						.then(function(results) {
@@ -118,18 +118,18 @@ templ AssigneeSection(taskID int64, assignees []model.AssigneeInfo, orgID int64,
 							dropdown.classList.remove('hidden');
 						});
 				}
-				
+
 				function renderDropdown(results) {
 					if (!results || results.length === 0) {
 						dropdown.innerHTML = '<div class="px-4 py-3 text-sm text-gray-500 italic">No users found</div>';
 						dropdown.classList.remove('hidden');
 						return;
 					}
-					
+
 					var html = '';
 					results.forEach(function(user, index) {
 						var activeClass = index === selectedIndex ? 'ring-2 ring-indigo-500' : '';
-						
+
 						html += '<button type="button" class="w-full text-left px-4 py-3 bg-gray-50 hover:bg-gray-100 ' + activeClass + ' transition-colors border-b border-gray-200 last:border-b-0 cursor-pointer" data-user-id="' + user.id + '" data-index="' + index + '">';
 						html += '  <div class="flex items-center gap-2">';
 						html += '    <div class="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-medium" style="background-color: ' + getAvatarColor(user.email) + '">';
@@ -142,10 +142,10 @@ templ AssigneeSection(taskID int64, assignees []model.AssigneeInfo, orgID int64,
 						html += '  </div>';
 						html += '</button>';
 					});
-					
+
 					dropdown.innerHTML = html;
 					dropdown.classList.remove('hidden');
-					
+
 					// Add click handlers to dropdown items
 					dropdown.querySelectorAll('button[data-user-id]').forEach(function(btn) {
 						btn.addEventListener('click', function() {
@@ -153,13 +153,13 @@ templ AssigneeSection(taskID int64, assignees []model.AssigneeInfo, orgID int64,
 						});
 					});
 				}
-				
+
 				function escapeHtml(text) {
 					var div = document.createElement('div');
 					div.textContent = text;
 					return div.innerHTML;
 				}
-				
+
 				function getInitials(name) {
 					if (!name) return '?';
 					var parts = name.trim().split(/\s+/);
@@ -168,7 +168,7 @@ templ AssigneeSection(taskID int64, assignees []model.AssigneeInfo, orgID int64,
 					}
 					return name.substring(0, 2).toUpperCase();
 				}
-				
+
 				function getAvatarColor(email) {
 					// Simple hash function to generate consistent colors
 					var hash = 0;
@@ -178,21 +178,21 @@ templ AssigneeSection(taskID int64, assignees []model.AssigneeInfo, orgID int64,
 					var colors = ['#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#06b6d4', '#3b82f6'];
 					return colors[Math.abs(hash) % colors.length];
 				}
-				
+
 				function selectUser(userId) {
 					// Update the form URL to include the user ID
 					var actionUrl = '/orgs/' + orgID + '/projects/' + projectID + '/tasks/' + taskID + '/assignees/' + userId;
 					hiddenForm.setAttribute('hx-post', actionUrl);
 					htmx.process(hiddenForm);
 					htmx.trigger(hiddenForm, 'submit');
-					
+
 					// Close the form
 					var formDiv = document.getElementById('add-assignee-form-' + taskID);
 					formDiv.classList.add('hidden');
 					searchInput.value = '';
 					dropdown.classList.add('hidden');
 				}
-				
+
 				// Event listeners
 				searchInput.addEventListener('input', function() {
 					clearTimeout(debounceTimer);
@@ -200,7 +200,7 @@ templ AssigneeSection(taskID int64, assignees []model.AssigneeInfo, orgID int64,
 						loadUsers(searchInput.value);
 					}, 300);
 				});
-				
+
 				searchInput.addEventListener('keydown', function(e) {
 					if (e.key === 'ArrowDown') {
 						e.preventDefault();
@@ -222,7 +222,7 @@ templ AssigneeSection(taskID int64, assignees []model.AssigneeInfo, orgID int64,
 						dropdown.classList.add('hidden');
 					}
 				});
-				
+
 				// Close dropdown when clicking outside
 				document.addEventListener('click', function(e) {
 					if (!formDiv.contains(e.target)) {
@@ -308,7 +308,7 @@ script toggleAddAssigneeForm(taskID string) {
 	var searchInput = document.getElementById('user-search-' + taskID);
 	var dropdown = document.getElementById('user-dropdown-' + taskID);
 	var listContainer = document.getElementById('assignee-list-container-' + taskID);
-	
+
 	if (form.classList.contains('hidden')) {
 		form.classList.remove('hidden');
 		// Hide the assignee list (including "No assignees" message) when form is shown

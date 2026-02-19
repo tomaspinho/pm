@@ -124,14 +124,14 @@ templ kanbanScript() {
 
 		function initKanban() {
 			var columns = document.querySelectorAll(".sortable-column");
-			
+
 			columns.forEach(function(col) {
 				// Destroy existing instance if it exists (important for htmx OOB swaps)
 				if (col.sortableInstance) {
 					col.sortableInstance.destroy();
 					delete col.sortableInstance;
 				}
-				
+
 				// Create new Sortable instance
 				col.sortableInstance = new Sortable(col, {
 					group: "kanban",
