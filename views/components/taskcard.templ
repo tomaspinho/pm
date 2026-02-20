@@ -54,7 +54,7 @@ templ TaskCard(task model.Task, orgID int64) {
 			</div>
 			<button
 				type="button"
-				class="delete-btn shrink-0 text-gray-400 hover:text-red-500 transition-colors"
+				class="delete-btn shrink-0 text-gray-400 hover:text-red-500 transition-colors cursor-pointer"
 				hx-delete={ fmt.Sprintf("/orgs/%d/projects/%d/tasks/%d", orgID, task.ProjectID, task.ID) }
 			hx-target={ "#task-" + fmt.Sprintf("%d", task.ID) }
 			hx-swap="outerHTML swap:1s"
