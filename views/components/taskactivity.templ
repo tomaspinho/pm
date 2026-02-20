@@ -1,0 +1,149 @@
+package components
+
+import (
+	"pm/internal/model"
+	"crypto/sha256"
+	"encoding/hex"
+	"fmt"
+	"time"
+)
+
+// Helper function to format activity message
+func formatActivityMessage(action string, fieldName string, oldValue interface{}, newValue interface{}) string {
+	switch action {
+	case "create":
+		return "Created task"
+	case "assign":
+		if val, ok := newValue.(map[string]interface{}); ok {
+			user := val["user"]
+			return fmt.Sprintf("Assigned %v", user)
+		}
+		return "Assigned user"
+	case "unassign":
+		if val, ok := oldValue.(map[string]interface{}); ok {
+			user := val["user"]
+			return fmt.Sprintf("Unassigned %v", user)
+		}
+		return "Unassigned user"
+	case "move":
+		if fieldName == "column_id" {
+			return fmt.Sprintf("Moved from %v to %v", oldValue, newValue)
+		}
+		return "Moved task"
+	case "update":
+		if fieldName != "" {
+			fieldName = " " + fieldName
+		}
+		if oldValue != nil && newValue != nil {
+			return fmt.Sprintf("Changed%s from %v to %v", fieldName, oldValue, newValue)
+		}
+		if newValue != nil {
+			return fmt.Sprintf("Set%s to %v", fieldName, newValue)
+		}
+		if oldValue != nil {
+			return fmt.Sprintf("Removed%s %v", fieldName, oldValue)
+		}
+		return fmt.Sprintf("Updated%s", fieldName)
+	}
+	return fmt.Sprintf("%s task", action)
+}
+
+// Helper function to format timestamp as absolute date
+func formatActivityTime(t time.Time) string {
+	now := time.Now()
+	
+	// If within today, format as time only
+	if now.Day() == t.Day() && now.Month() == t.Month() && now.Year() == t.Year() {
+		return t.Format("3:04 PM")
+	}
+	
+	// If yesterday
+	yesterday := now.AddDate(0, 0, -1)
+	if yesterday.Day() == t.Day() && yesterday.Month() == t.Month() && yesterday.Year() == t.Year() {
+		return "Yesterday"
+	}
+	
+	// Otherwise format as full date
+	return t.Format("Jan 2, 2006")
+}
+
+// TaskActivityFeed displays the activity feed for a task.
+templ TaskActivityFeed(taskID int64, orgID int64, activity []model.TaskActivityRecord) {
+	if len(activity) == 0 {
+		<p class="text-sm text-gray-400 italic p-4">No activity yet</p>
+		return
+	}
+
+	<div class="activity-feed space-y-4">
+		for _, item := range activity {
+			@ActivityItem(item, taskID, orgID)
+		}
+	</div>
+}
+
+// ActivityItem displays a single activity record.
+templ ActivityItem(item model.TaskActivityRecord, taskID int64, orgID int64) {
+	<div class="flex gap-3 activity-item">
+		<div class="flex-shrink-0">
+			<div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold text-white" style={ fmt.Sprintf("background-color: %s", getUserAvatarColor(item.UserEmail)) }>
+				{ getInitials(item.UserDisplayName) }
+			</div>
+		</div>
+		<div class="flex-1 min-w-0">
+			<p class="text-sm text-gray-900">
+				<span class="font-medium">{ item.UserDisplayName }</span>
+				{ formatActivityMessage(item.Action, getFieldName(item.FieldName), item.OldValue(), item.NewValue()) }
+				<span class="text-gray-500 text-xs ml-2">{ formatActivityTime(item.CreatedAt) }</span>
+			</p>
+		</div>
+	</div>
+}
+
+// Helper function to get avatar color based on email
+func getUserAvatarColor(email string) string {
+	hash := sha256.Sum256([]byte(email))
+	hashStr := hex.EncodeToString(hash[:])
+
+	r := parseInt(hashStr[0:2], 16)
+	g := parseInt(hashStr[2:4], 16)
+	b := parseInt(hashStr[4:6], 16)
+
+	if r < 60 {
+		r = 60 + (r % 100)
+	}
+	if g < 60 {
+		g = 60 + (g % 100)
+	}
+	if b < 60 {
+		b = 60 + (b % 100)
+	}
+
+	return fmt.Sprintf("#%02x%02x%02x", r, g, b)
+}
+
+// Helper function to get initials from name
+func getInitials(name string) string {
+	if len(name) == 0 {
+		return "?"
+	}
+	runes := []rune(name)
+	if len(runes) == 1 {
+		return string([]rune{runes[0]})
+	}
+	return string([]rune{runes[0], runes[1]})
+}
+
+// Helper function to parse hex string to int
+func parseInt(s string, base int) int {
+	var result int
+	_, _ = fmt.Sscanf(s, "%x", &result)
+	return result
+}
+
+// Helper function to safely get field name from pointer
+func getFieldName(fieldName *string) string {
+	if fieldName == nil {
+		return ""
+	}
+	return *fieldName
+}

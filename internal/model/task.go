@@ -1,6 +1,9 @@
 package model
 
-import "time"
+import (
+	"encoding/json"
+	"time"
+)
 
 // Task represents a kanban card belonging to a project.
 type Task struct {
@@ -71,4 +74,47 @@ type TaskSearchResult struct {
 	ColumnColor string     `db:"column_color" json:"column_color"`
 	Author      string     `db:"author" json:"author"`
 	DueDate     *time.Time `db:"due_date" json:"due_date,omitempty"`
+}
+
+// TaskActivityRecord represents a single activity record with user info.
+type TaskActivityRecord struct {
+	ID              int64     `db:"id"              json:"id"`
+	TaskID          int64     `db:"task_id"         json:"task_id"`
+	UserID          int64     `db:"user_id"         json:"user_id"`
+	Action          string    `db:"action"          json:"action"`
+	FieldName       *string   `db:"field_name"      json:"field_name,omitempty"`
+	OldValueRaw     []byte    `db:"old_value"       json:"-"`
+	NewValueRaw     []byte    `db:"new_value"       json:"-"`
+	CreatedAt       time.Time `db:"created_at"      json:"created_at"`
+	UserDisplayName string    `db:"user_display_name" json:"user_display_name"`
+	UserEmail       string    `db:"user_email"      json:"user_email"`
+}
+
+// OldValue returns the parsed old value as interface{}.
+func (r *TaskActivityRecord) OldValue() interface{} {
+	if len(r.OldValueRaw) == 0 {
+		return nil
+	}
+	var val interface{}
+	if err := json.Unmarshal(r.OldValueRaw, &val); err != nil {
+		return string(r.OldValueRaw)
+	}
+	return val
+}
+
+// NewValue returns the parsed new value as interface{}.
+func (r *TaskActivityRecord) NewValue() interface{} {
+	if len(r.NewValueRaw) == 0 {
+		return nil
+	}
+	var val interface{}
+	if err := json.Unmarshal(r.NewValueRaw, &val); err != nil {
+		return string(r.NewValueRaw)
+	}
+	return val
+}
+
+// HasValues returns true if the activity has both old and new values.
+func (r *TaskActivityRecord) HasValues() bool {
+	return len(r.OldValueRaw) > 0 && len(r.NewValueRaw) > 0
 }

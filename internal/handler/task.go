@@ -61,8 +61,35 @@ func (h *Handler) HandleMoveTask(c fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "invalid position")
 	}
 
+	// Get current task data
+	currentTask, err := h.store.GetTask(c.Context(), taskID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusNotFound, "task not found")
+	}
+
+	// Get column names for activity logging
+	oldColName := ""
+	newColName := ""
+
+	if currentTask.ColumnID != newColumnID {
+		oldCol, err := h.store.GetProjectColumn(c.Context(), currentTask.ColumnID)
+		if err == nil {
+			oldColName = oldCol.Name
+		}
+		newCol, err := h.store.GetProjectColumn(c.Context(), newColumnID)
+		if err == nil {
+			newColName = newCol.Name
+		}
+	}
+
 	if err := h.store.MoveTask(c.Context(), taskID, newColumnID, newPosition); err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to move task")
+	}
+
+	// Create activity record for column move
+	user, err := middleware.GetCurrentUser(c)
+	if err == nil && oldColName != "" && newColName != "" {
+		_ = h.store.CreateActivity(c.Context(), taskID, user.ID, "move", "column_id", oldColName, newColName)
 	}
 
 	return c.SendStatus(fiber.StatusNoContent)
@@ -132,6 +159,12 @@ func (h *Handler) HandleCreateTask(c fiber.Ctx) error {
 	task, err := h.store.CreateTask(c.Context(), projectID, title, description, columnID, dueDate)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to create task")
+	}
+
+	// Create activity record for task creation
+	user, err := middleware.GetCurrentUser(c)
+	if err == nil {
+		_ = h.store.CreateActivity(c.Context(), task.ID, user.ID, "create", "", nil, nil)
 	}
 
 	// Get updated count.
@@ -208,8 +241,14 @@ func (h *Handler) HandleTaskDetail(c fiber.Ctx) error {
 
 	// Build comment tree with max depth 3
 	commentTree := store.BuildCommentTree(comments, 3)
+	// Load activity feed
+	activity, err := h.store.GetTaskActivity(c.Context(), taskID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to load activity")
+	}
 
-	return render(c, views.TaskDetailPane(*taskWithDeps, orgID, projectID, commentTree, user))
+
+	return render(c, views.TaskDetailPane(*taskWithDeps, orgID, projectID, commentTree, user, activity))
 }
 
 // HandleUpdateTask updates a task's basic fields.
@@ -223,6 +262,12 @@ func (h *Handler) HandleUpdateTask(c fiber.Ctx) error {
 	taskID, err := strconv.ParseInt(c.Params("id"), 10, 64)
 	if err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, "invalid task id")
+	}
+
+	// Get current task data for comparison
+	currentTask, err := h.store.GetTask(c.Context(), taskID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusNotFound, "task not found")
 	}
 
 	title := c.FormValue("title")
@@ -241,6 +286,23 @@ func (h *Handler) HandleUpdateTask(c fiber.Ctx) error {
 	err = h.store.UpdateTask(c.Context(), taskID, title, description, author, dueDate)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to update task")
+	}
+
+	// Create activity records for field changes
+	user, err := middleware.GetCurrentUser(c)
+	if err == nil {
+		if currentTask.Title != title {
+			_ = h.store.CreateActivity(c.Context(), taskID, user.ID, "update", "title", currentTask.Title, title)
+		}
+		if currentTask.Description != description {
+			_ = h.store.CreateActivity(c.Context(), taskID, user.ID, "update", "description", currentTask.Description, description)
+		}
+		if currentTask.Author != author {
+			_ = h.store.CreateActivity(c.Context(), taskID, user.ID, "update", "author", currentTask.Author, author)
+		}
+		if currentTask.DueDateString() != dueDate.Format("2006-01-02") {
+			_ = h.store.CreateActivity(c.Context(), taskID, user.ID, "update", "due_date", currentTask.DueDateString(), dueDate.Format("2006-01-02"))
+		}
 	}
 
 	taskWithDeps, err := h.store.GetTaskWithDependencies(c.Context(), taskID)
@@ -274,6 +336,18 @@ func (h *Handler) HandleAddDependency(c fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to add dependency")
 	}
 
+	// Get the dependency task title for the activity
+	depTask, err := h.store.GetTask(c.Context(), dependsOnID)
+	if err != nil {
+		depTask = &model.Task{Title: fmt.Sprintf("Task %d", dependsOnID)}
+	}
+
+	// Create activity record
+	user, err := middleware.GetCurrentUser(c)
+	if err == nil {
+		_ = h.store.CreateActivity(c.Context(), taskID, user.ID, "update", "dependency", nil, map[string]string{"title": depTask.Title, "id": fmt.Sprintf("%d", dependsOnID)})
+	}
+
 	taskWithDeps, err := h.store.GetTaskWithDependencies(c.Context(), taskID)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to reload task")
@@ -300,9 +374,21 @@ func (h *Handler) HandleRemoveDependency(c fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "invalid dependency id")
 	}
 
+	// Get the dependency task title for the activity before removing
+	depTask, err := h.store.GetTask(c.Context(), dependsOnID)
+	if err != nil {
+		depTask = &model.Task{Title: fmt.Sprintf("Task %d", dependsOnID)}
+	}
+
 	err = h.store.RemoveDependency(c.Context(), taskID, dependsOnID)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to remove dependency")
+	}
+
+	// Create activity record
+	user, err := middleware.GetCurrentUser(c)
+	if err == nil {
+		_ = h.store.CreateActivity(c.Context(), taskID, user.ID, "update", "dependency", map[string]string{"title": depTask.Title, "id": fmt.Sprintf("%d", dependsOnID)}, nil)
 	}
 
 	taskWithDeps, err := h.store.GetTaskWithDependencies(c.Context(), taskID)
@@ -389,6 +475,9 @@ func (h *Handler) HandleAssignSelf(c fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to assign user")
 	}
 
+	// Create activity record
+	_ = h.store.CreateActivity(c.Context(), taskID, currentUser.ID, "assign", "", nil, map[string]string{"user": currentUser.DisplayName, "email": currentUser.Email})
+
 	// Get updated task with dependencies (includes assignees)
 	taskWithDeps, err := h.store.GetTaskWithDependencies(c.Context(), taskID)
 	if err != nil {
@@ -434,11 +523,20 @@ func (h *Handler) HandleUnassign(c fiber.Ctx) error {
 		}
 	}
 
+	// Get user info before unassigning
+	userToRemove, err := h.store.GetUser(c.Context(), userIDToRemove)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to get user")
+	}
+
 	// Unassign user from task
 	err = h.store.UnassignUserFromTask(c.Context(), taskID, userIDToRemove)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to unassign user")
 	}
+
+	// Create activity record
+	_ = h.store.CreateActivity(c.Context(), taskID, currentUser.ID, "unassign", "", map[string]string{"user": userToRemove.DisplayName, "email": userToRemove.Email}, nil)
 
 	// Get updated task with dependencies (includes assignees)
 	taskWithDeps, err := h.store.GetTaskWithDependencies(c.Context(), taskID)
@@ -519,11 +617,20 @@ func (h *Handler) HandleAssignUser(c fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "user is not a member of this organization")
 	}
 
+	// Get user info before assigning
+	userToAssign, err := h.store.GetUserByID(c.Context(), userIDToAssign)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to get user")
+	}
+
 	// Assign user to task
 	err = h.store.AssignUserToTask(c.Context(), taskID, userIDToAssign)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to assign user")
 	}
+
+	// Create activity record
+	_ = h.store.CreateActivity(c.Context(), taskID, currentUser.ID, "assign", "", nil, map[string]string{"user": userToAssign.DisplayName, "email": userToAssign.Email})
 
 	// Get updated task with dependencies (includes assignees)
 	taskWithDeps, err := h.store.GetTaskWithDependencies(c.Context(), taskID)
@@ -560,9 +667,28 @@ func (h *Handler) HandleAddMetadata(c fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to add metadata")
 	}
 
+	// Get current task metadata to get old value
 	task, err := h.store.GetTask(c.Context(), taskID)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to reload task")
+	}
+
+	// Get old value (should be empty before adding)
+	oldVal := ""
+	if task.Metadata != nil {
+		if v, exists := task.Metadata[key]; exists {
+			if vStr, ok := v.(string); ok {
+				oldVal = vStr
+			} else {
+				oldVal = fmt.Sprintf("%v", v)
+			}
+		}
+	}
+
+	// Create activity record
+	user, err := middleware.GetCurrentUser(c)
+	if err == nil {
+		_ = h.store.CreateActivity(c.Context(), taskID, user.ID, "update", fmt.Sprintf("metadata:%s", key), oldVal, value)
 	}
 
 	return render(c, views.MetadataSection(taskID, orgID, projectID, task.Metadata))
@@ -589,6 +715,12 @@ func (h *Handler) HandleDeleteMetadata(c fiber.Ctx) error {
 	err = h.store.DeleteMetadataKey(c.Context(), taskID, key)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to delete metadata")
+	}
+
+	// Create activity record
+	user, err := middleware.GetCurrentUser(c)
+	if err == nil {
+		_ = h.store.CreateActivity(c.Context(), taskID, user.ID, "update", fmt.Sprintf("metadata:%s", key), "deleted", nil)
 	}
 
 	task, err := h.store.GetTask(c.Context(), taskID)
@@ -644,9 +776,28 @@ func (h *Handler) HandleUpdateMetadata(c fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to update metadata")
 	}
 
+	// Get current task metadata to get old value
 	task, err := h.store.GetTask(c.Context(), taskID)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to reload task")
+	}
+
+	// Get old value
+	oldVal := ""
+	if task.Metadata != nil {
+		if v, exists := task.Metadata[newKey]; exists {
+			if vStr, ok := v.(string); ok {
+				oldVal = vStr
+			} else {
+				oldVal = fmt.Sprintf("%v", v)
+			}
+		}
+	}
+
+	// Create activity record
+	user, err := middleware.GetCurrentUser(c)
+	if err == nil {
+		_ = h.store.CreateActivity(c.Context(), taskID, user.ID, "update", fmt.Sprintf("metadata:%s", newKey), oldVal, value)
 	}
 
 	return render(c, views.MetadataSection(taskID, orgID, projectID, task.Metadata))
@@ -685,6 +836,23 @@ func (h *Handler) HandleUpdateColumn(c fiber.Ctx) error {
 	oldColumnID, err := h.store.UpdateTaskColumn(c.Context(), taskID, newColumnID)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to update column")
+	}
+
+	// Get old and new column names for activity
+	oldCol, err := h.store.GetProjectColumn(c.Context(), oldColumnID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to get old column")
+	}
+
+	newCol, err := h.store.GetProjectColumn(c.Context(), newColumnID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to get new column")
+	}
+
+	// Create activity record for move
+	user, err := middleware.GetCurrentUser(c)
+	if err == nil {
+		_ = h.store.CreateActivity(c.Context(), taskID, user.ID, "move", "column_id", oldCol.Name, newCol.Name)
 	}
 
 	// Get the updated task with dependencies.

@@ -200,8 +200,8 @@ templ DeleteTaskResponse(columnID int64, count int) {
 }
 
 // TaskDetailPane wraps the component for use in handlers.
-templ TaskDetailPane(taskWithDeps model.TaskWithDependencies, orgID int64, projectID int64, comments []model.CommentThread, currentUser *model.User) {
-	@components.TaskDetailPane(taskWithDeps, orgID, projectID, comments, currentUser)
+templ TaskDetailPane(taskWithDeps model.TaskWithDependencies, orgID int64, projectID int64, comments []model.CommentThread, currentUser *model.User, activity []model.TaskActivityRecord) {
+	@components.TaskDetailPane(taskWithDeps, orgID, projectID, comments, currentUser, activity)
 }
 
 // DependencySection wraps the component for use in handlers.

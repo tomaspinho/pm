@@ -42,6 +42,11 @@ func (s *Store) GetUserByID(ctx context.Context, id int64) (*model.User, error) 
 	return &user, nil
 }
 
+// GetUser fetches a user by ID (convenience alias for GetUserByID).
+func (s *Store) GetUser(ctx context.Context, id int64) (*model.User, error) {
+	return s.GetUserByID(ctx, id)
+}
+
 // UpdateLastViewedProject updates the user's last viewed project.
 func (s *Store) UpdateLastViewedProject(ctx context.Context, userID, projectID int64) error {
 	_, err := s.db.ExecContext(ctx,
