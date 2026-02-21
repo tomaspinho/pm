@@ -9,43 +9,67 @@ import (
 )
 
 // Helper function to format activity message
-func formatActivityMessage(action string, fieldName string, oldValue interface{}, newValue interface{}) string {
+templ ActivityMessage(action string, fieldName string, oldValue interface{}, newValue interface{}) {
 	switch action {
 	case "create":
-		return "Created task"
+    <span>Created task</span>
+		{{return}}
 	case "assign":
 		if val, ok := newValue.(map[string]interface{}); ok {
-			user := val["user"]
-			return fmt.Sprintf("Assigned %v", user)
+			{{user, _ := val["user"].(string)}}
+      <span>Assigned <span class="font-bold">{user}</span></span>
+      return
 		}
-		return "Assigned user"
+    <span>Assigned user</span>
+		{{return}}
 	case "unassign":
 		if val, ok := oldValue.(map[string]interface{}); ok {
-			user := val["user"]
-			return fmt.Sprintf("Unassigned %v", user)
-		}
-		return "Unassigned user"
+			{{user, _ := val["user"].(string)}}
+      <span>Unassigned <span class="font-bold">{user}</span></span>
+		  {{return}}
+    }
+    <span>Unassigned user</span>
 	case "move":
 		if fieldName == "column_id" {
-			return fmt.Sprintf("Moved from %v to %v", oldValue, newValue)
-		}
-		return "Moved task"
-	case "update":
+      {{oldV, _ := oldValue.(string)}}
+      {{newV, _ := newValue.(string)}}
+      <span>Moved from <span class="font-bold">{oldV}</span> to <span class="font-bold">{newV}</span></span>
+		  {{return}}
+    }
+    <span>Moved task</span>
+		{{return}}
+  case "update":
+		if newValue != nil && fieldName == "dependency" {
+      {{ valueMap, _ := newValue.(map[string]interface{}) }}
+      {{ title, _ := valueMap["title"].(string) }}
+      {{ id, _ := valueMap["id"].(string) }}
+      <span>Added task <span class="font-bold"><a href={id}>{title}</a></span> as a {fieldName}</span>
+			{{return}}
+    }
 		if fieldName != "" {
-			fieldName = " " + fieldName
+			{{fieldName = " " + fieldName}}
 		}
-		if oldValue != nil && newValue != nil {
-			return fmt.Sprintf("Changed%s from %v to %v", fieldName, oldValue, newValue)
+		if oldValue != "" && newValue != nil {
+      {{oldV, _ := oldValue.(string)}}
+      {{newV, _ := newValue.(string)}}
+			<span>Changed{fieldName} from <span class="font-bold">{oldV}</span> to <span class="font-bold">{newV}</span></span>
+      {{return}}
 		}
 		if newValue != nil {
-			return fmt.Sprintf("Set%s to %v", fieldName, newValue)
+      {{newV, _ := newValue.(string)}}
+			<span>Set{fieldName} to <span class="font-bold">{newV}</span></span>
+			{{return}}
 		}
 		if oldValue != nil {
-			return fmt.Sprintf("Removed%s %v", fieldName, oldValue)
+      {{oldV, _ := oldValue.(string)}}
+			<span>Removed{fieldName} <span class="font-bold">{oldV}</span></span>
+			{{return}}
 		}
-		return fmt.Sprintf("Updated%s", fieldName)
+    <span>Updated{fieldName}</span>
+		{{return}}
 	}
-	return fmt.Sprintf("%s task", action)
+  <span>{action} task</span>
+	{{return}}
 }
 
 // Helper function to format timestamp as absolute date
@@ -92,7 +116,7 @@ templ ActivityItem(item model.TaskActivityRecord, taskID int64, orgID int64) {
 		<div class="flex-1 min-w-0">
 			<p class="text-sm text-gray-900">
 				<span class="font-medium">{ item.UserDisplayName }</span>
-				{ formatActivityMessage(item.Action, getFieldName(item.FieldName), item.OldValue(), item.NewValue()) }
+				@ActivityMessage(item.Action, getFieldName(item.FieldName), item.OldValue(), item.NewValue())
 				<span class="text-gray-500 text-xs ml-2">{ formatActivityTime(item.CreatedAt) }</span>
 			</p>
 		</div>
