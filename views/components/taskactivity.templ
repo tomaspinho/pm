@@ -115,7 +115,7 @@ templ ActivityItem(item model.TaskActivityRecord, taskID int64, orgID int64) {
 		</div>
 		<div class="flex-1 min-w-0">
 			<p class="text-sm text-gray-900">
-				<span class="font-medium">{ item.UserDisplayName }</span>
+				<span class="font-medium mr-1">{ item.UserDisplayName }</span>
 				@ActivityMessage(item.Action, getFieldName(item.FieldName), item.OldValue(), item.NewValue())
 				<span class="text-gray-500 text-xs ml-2">{ formatActivityTime(item.CreatedAt) }</span>
 			</p>
