@@ -18,30 +18,20 @@ func dueDateBadgeClass(task model.Task) string {
 
 templ TaskCard(task model.Task, orgID int64) {
 	<div
-		class="task-card bg-white rounded-lg shadow-sm border border-gray-200 p-3 cursor-grab active:cursor-grabbing hover:shadow-md transition-all duration-150"
+		class="task-card drag-handle cursor-pointer bg-white rounded-lg shadow-sm border border-gray-200 p-3 cursor-grab active:cursor-grabbing hover:shadow-md transition-all duration-150"
 		data-id={ fmt.Sprintf("%d", task.ID) }
 		data-org-id={ fmt.Sprintf("%d", orgID) }
 		data-project-id={ fmt.Sprintf("%d", task.ProjectID) }
 		id={ "task-" + fmt.Sprintf("%d", task.ID) }
+		hx-get={ fmt.Sprintf("/orgs/%d/projects/%d/tasks/%d/detail", orgID, task.ProjectID, task.ID) }
+		hx-target="body"
+		hx-swap="beforeend"
+		data-url={ fmt.Sprintf("/orgs/%d/projects/%d/tasks/%d", orgID, task.ProjectID, task.ID) }
+		hx-on::after-request="history.pushState(null, '', this.dataset.url)"
 	>
 		<div class="flex items-start gap-2">
-			<span class="drag-handle mt-0.5 text-gray-300 hover:text-gray-500 transition-colors shrink-0">
-				<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 16 16">
-					<circle cx="4" cy="3" r="1.5"></circle>
-					<circle cx="4" cy="8" r="1.5"></circle>
-					<circle cx="4" cy="13" r="1.5"></circle>
-					<circle cx="10" cy="3" r="1.5"></circle>
-					<circle cx="10" cy="8" r="1.5"></circle>
-					<circle cx="10" cy="13" r="1.5"></circle>
-				</svg>
-			</span>
 			<div
 				class="flex-1 min-w-0 cursor-pointer task-card-content"
-				hx-get={ fmt.Sprintf("/orgs/%d/projects/%d/tasks/%d/detail", orgID, task.ProjectID, task.ID) }
-				hx-target="body"
-				hx-swap="beforeend"
-				data-url={ fmt.Sprintf("/orgs/%d/projects/%d/tasks/%d", orgID, task.ProjectID, task.ID) }
-				hx-on::after-request="history.pushState(null, '', this.dataset.url)"
 			>
 				<p class="text-sm font-medium text-gray-900 truncate">{ task.Title }</p>
 				if task.DueDate != nil {
@@ -62,6 +52,7 @@ templ TaskCard(task model.Task, orgID int64) {
 				hx-delete={ fmt.Sprintf("/orgs/%d/projects/%d/tasks/%d", orgID, task.ProjectID, task.ID) }
 				hx-target={ "#task-" + fmt.Sprintf("%d", task.ID) }
 				hx-swap="outerHTML swap:1s"
+        hx-trigger="click consume"
 				data-confirm-delete="true"
 				data-task-column-id={ fmt.Sprintf("%d", task.ColumnID) }
 			>
