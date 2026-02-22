@@ -63,7 +63,7 @@ func TestBuildCommentTree(t *testing.T) {
 						ID:        2,
 						TaskID:    1,
 						UserID:    2,
-						ParentID:  ptr(int64(1)),
+						ParentID:  new(int64(1)),
 						Content:   "Reply to 1",
 						CreatedAt: now.Add(time.Minute),
 					},
@@ -110,7 +110,7 @@ func TestBuildCommentTree(t *testing.T) {
 						ID:        2,
 						TaskID:    1,
 						UserID:    2,
-						ParentID:  ptr(int64(1)),
+						ParentID:  new(int64(1)),
 						Content:   "Reply depth 1",
 						CreatedAt: now.Add(time.Minute),
 					},
@@ -121,7 +121,7 @@ func TestBuildCommentTree(t *testing.T) {
 						ID:        3,
 						TaskID:    1,
 						UserID:    3,
-						ParentID:  ptr(int64(2)),
+						ParentID:  new(int64(2)),
 						Content:   "Reply depth 2",
 						CreatedAt: now.Add(2 * time.Minute),
 					},
@@ -132,7 +132,7 @@ func TestBuildCommentTree(t *testing.T) {
 						ID:        4,
 						TaskID:    1,
 						UserID:    4,
-						ParentID:  ptr(int64(3)),
+						ParentID:  new(int64(3)),
 						Content:   "Reply depth 3",
 						CreatedAt: now.Add(3 * time.Minute),
 					},
@@ -143,7 +143,7 @@ func TestBuildCommentTree(t *testing.T) {
 						ID:        5,
 						TaskID:    1,
 						UserID:    5,
-						ParentID:  ptr(int64(4)),
+						ParentID:  new(int64(4)),
 						Content:   "Reply depth 4 (should be flattened)",
 						CreatedAt: now.Add(4 * time.Minute),
 					},
@@ -234,8 +234,4 @@ func TestBuildCommentTree(t *testing.T) {
 			}
 		})
 	}
-}
-
-func ptr(i int64) *int64 {
-	return &i
 }

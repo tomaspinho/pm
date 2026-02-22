@@ -217,7 +217,7 @@ func parseMetadataValue(value string) (string, error) {
 	}
 
 	// Try to parse as JSON to detect valid JSON
-	var jsonTest interface{}
+	var jsonTest any
 	if err := json.Unmarshal([]byte(trimmed), &jsonTest); err == nil {
 		// Valid JSON - check if it's an object or array
 		if (strings.HasPrefix(trimmed, "{") && strings.HasSuffix(trimmed, "}")) ||
@@ -237,7 +237,7 @@ func parseMetadataValue(value string) (string, error) {
 }
 
 // SetMetadataKey sets a single key in the task's metadata.
-func (s *Store) SetMetadataKey(ctx context.Context, taskID int64, key string, value interface{}) error {
+func (s *Store) SetMetadataKey(ctx context.Context, taskID int64, key string, value any) error {
 	// Convert value to string if it isn't already
 	valueStr, ok := value.(string)
 	if !ok {

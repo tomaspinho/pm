@@ -1,14 +1,14 @@
 package store
 
 import (
-	"pm/internal/model"
 	"context"
 	"encoding/json"
 	"fmt"
+	"pm/internal/model"
 )
 
 // CreateActivity inserts a new activity record.
-func (s *Store) CreateActivity(ctx context.Context, taskID, userID int64, action, fieldName string, oldValue, newValue interface{}) error {
+func (s *Store) CreateActivity(ctx context.Context, taskID, userID int64, action, fieldName string, oldValue, newValue any) error {
 	var oldJSON, newJSON []byte
 	var err error
 
@@ -33,7 +33,6 @@ func (s *Store) CreateActivity(ctx context.Context, taskID, userID int64, action
 	}
 	return nil
 }
-
 
 // GetTaskActivity retrieves all activity for a task, ordered by creation time (oldest first).
 func (s *Store) GetTaskActivity(ctx context.Context, taskID int64) ([]model.TaskActivityRecord, error) {

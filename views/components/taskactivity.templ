@@ -13,63 +13,84 @@ templ ActivityMessage(action string, fieldName string, oldValue interface{}, new
 	switch action {
 	case "create":
     <span>Created task</span>
-		{{return}}
 	case "assign":
 		if val, ok := newValue.(map[string]interface{}); ok {
-			{{user, _ := val["user"].(string)}}
-      <span>Assigned <span class="font-bold">{user}</span></span>
-      return
+			if user, ok := val["user"].(string); ok {
+				<span>Assigned <span class="font-bold">{user}</span></span>
+			} else {
+				<span>Assigned user</span>
+			}
+		} else {
+			<span>Assigned user</span>
 		}
-    <span>Assigned user</span>
-		{{return}}
 	case "unassign":
 		if val, ok := oldValue.(map[string]interface{}); ok {
-			{{user, _ := val["user"].(string)}}
-      <span>Unassigned <span class="font-bold">{user}</span></span>
-		  {{return}}
-    }
-    <span>Unassigned user</span>
+			if user, ok := val["user"].(string); ok {
+				<span>Unassigned <span class="font-bold">{user}</span></span>
+			} else {
+				<span>Unassigned user</span>
+			}
+		} else {
+			<span>Unassigned user</span>
+		}
 	case "move":
 		if fieldName == "column_id" {
-      {{oldV, _ := oldValue.(string)}}
-      {{newV, _ := newValue.(string)}}
-      <span>Moved from <span class="font-bold">{oldV}</span> to <span class="font-bold">{newV}</span></span>
-		  {{return}}
-    }
-    <span>Moved task</span>
-		{{return}}
-  case "update":
+			if oldV, ok := oldValue.(string); ok {
+				if newV, ok := newValue.(string); ok {
+					<span>Moved from <span class="font-bold">{oldV}</span> to <span class="font-bold">{newV}</span></span>
+				} else {
+					<span>Moved task</span>
+				}
+			} else {
+				<span>Moved task</span>
+			}
+		} else {
+			<span>Moved task</span>
+		}
+	case "update":
 		if newValue != nil && fieldName == "dependency" {
-      {{ valueMap, _ := newValue.(map[string]interface{}) }}
-      {{ title, _ := valueMap["title"].(string) }}
-      {{ id, _ := valueMap["id"].(string) }}
-      <span>Added task <span class="font-bold"><a href={id}>{title}</a></span> as a {fieldName}</span>
-			{{return}}
-    }
-		if fieldName != "" {
-			{{fieldName = " " + fieldName}}
+			if valueMap, ok := newValue.(map[string]interface{}); ok {
+				if title, ok := valueMap["title"].(string); ok {
+					if id, ok := valueMap["id"].(string); ok {
+						<span>Added task <span class="font-bold"><a href={id}>{title}</a></span> as a {fieldName}</span>
+					} else {
+						<span>Updated{fieldName}</span>
+					}
+				} else {
+					<span>Updated{fieldName}</span>
+				}
+			} else {
+				<span>Updated{fieldName}</span>
+			}
 		}
 		if oldValue != "" && newValue != nil {
-      {{oldV, _ := oldValue.(string)}}
-      {{newV, _ := newValue.(string)}}
-			<span>Changed{fieldName} from <span class="font-bold">{oldV}</span> to <span class="font-bold">{newV}</span></span>
-      {{return}}
+			if oldV, ok := oldValue.(string); ok {
+				if newV, ok := newValue.(string); ok {
+					<span>Changed{getFieldDisplay(fieldName)} from <span class="font-bold">{oldV}</span> to <span class="font-bold">{newV}</span></span>
+				} else {
+					<span>Updated{getFieldDisplay(fieldName)}</span>
+				}
+			} else {
+				<span>Updated{getFieldDisplay(fieldName)}</span>
+			}
+		} else if newValue != nil {
+			if newV, ok := newValue.(string); ok {
+				<span>Set{getFieldDisplay(fieldName)} to <span class="font-bold">{newV}</span></span>
+			} else {
+				<span>Updated{getFieldDisplay(fieldName)}</span>
+			}
+		} else if oldValue != nil {
+			if oldV, ok := oldValue.(string); ok {
+				<span>Removed{getFieldDisplay(fieldName)} <span class="font-bold">{oldV}</span></span>
+			} else {
+				<span>Updated{getFieldDisplay(fieldName)}</span>
+			}
+		} else {
+			<span>Updated{getFieldDisplay(fieldName)}</span>
 		}
-		if newValue != nil {
-      {{newV, _ := newValue.(string)}}
-			<span>Set{fieldName} to <span class="font-bold">{newV}</span></span>
-			{{return}}
-		}
-		if oldValue != nil {
-      {{oldV, _ := oldValue.(string)}}
-			<span>Removed{fieldName} <span class="font-bold">{oldV}</span></span>
-			{{return}}
-		}
-    <span>Updated{fieldName}</span>
-		{{return}}
+	default:
+		<span>{action} task</span>
 	}
-  <span>{action} task</span>
-	{{return}}
 }
 
 // Helper function to format timestamp as absolute date
@@ -170,4 +191,12 @@ func getFieldName(fieldName *string) string {
 		return ""
 	}
 	return *fieldName
+}
+
+// Helper to add space prefix to field name if not empty
+func getFieldDisplay(fieldName string) string {
+	if fieldName == "" {
+		return ""
+	}
+	return " " + fieldName
 }

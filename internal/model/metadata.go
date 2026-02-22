@@ -7,10 +7,10 @@ import (
 )
 
 // TaskMetadata holds arbitrary key-value pairs for task metadata.
-type TaskMetadata map[string]interface{}
+type TaskMetadata map[string]any
 
 // Scan implements sql.Scanner for database deserialization.
-func (m *TaskMetadata) Scan(value interface{}) error {
+func (m *TaskMetadata) Scan(value any) error {
 	if value == nil {
 		*m = make(TaskMetadata)
 		return nil
@@ -38,7 +38,7 @@ func (m TaskMetadata) Value() (driver.Value, error) {
 }
 
 // Get retrieves a value from metadata by key.
-func (m TaskMetadata) Get(key string) (interface{}, bool) {
+func (m TaskMetadata) Get(key string) (any, bool) {
 	val, ok := m[key]
 	return val, ok
 }
@@ -52,7 +52,7 @@ func (m TaskMetadata) GetString(key string) string {
 }
 
 // Set sets a key-value pair in metadata.
-func (m TaskMetadata) Set(key string, value interface{}) {
+func (m TaskMetadata) Set(key string, value any) {
 	m[key] = value
 }
 

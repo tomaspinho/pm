@@ -91,11 +91,11 @@ type TaskActivityRecord struct {
 }
 
 // OldValue returns the parsed old value as interface{}.
-func (r *TaskActivityRecord) OldValue() interface{} {
+func (r *TaskActivityRecord) OldValue() any {
 	if len(r.OldValueRaw) == 0 {
 		return nil
 	}
-	var val interface{}
+	var val any
 	if err := json.Unmarshal(r.OldValueRaw, &val); err != nil {
 		return string(r.OldValueRaw)
 	}
@@ -103,11 +103,11 @@ func (r *TaskActivityRecord) OldValue() interface{} {
 }
 
 // NewValue returns the parsed new value as interface{}.
-func (r *TaskActivityRecord) NewValue() interface{} {
+func (r *TaskActivityRecord) NewValue() any {
 	if len(r.NewValueRaw) == 0 {
 		return nil
 	}
-	var val interface{}
+	var val any
 	if err := json.Unmarshal(r.NewValueRaw, &val); err != nil {
 		return string(r.NewValueRaw)
 	}
