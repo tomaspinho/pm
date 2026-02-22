@@ -49,7 +49,7 @@ A modern, open-source kanban board for project management. Built with Go, htmx, 
 
 | Component | Technology |
 |-----------|------------|
-| **Language** | Go 1.25 |
+| **Language** | Go 1.26 |
 | **Web Framework** | Fiber v3 |
 | **Database** | PostgreSQL with sqlx |
 | **Migrations** | goose |

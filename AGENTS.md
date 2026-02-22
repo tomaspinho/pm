@@ -6,7 +6,7 @@ Instructions for AI coding agents operating in this repository.
 
 | Layer     | Tool                    | Docs                                  |
 |-----------|-------------------------|---------------------------------------|
-| Language  | Go 1.25                 | https://go.dev/doc/                   |
+| Language  | Go 1.26                 | https://go.dev/doc/                   |
 | Web       | Fiber v3                | https://docs.gofiber.io/              |
 | Database  | PostgreSQL + sqlx       | https://jmoiron.github.io/sqlx/       |
 | Migration | goose v3                | https://pressly.github.io/goose/      |

@@ -5,7 +5,7 @@ _.file = ".env"
 _.path = ["./bin"]
 
 [tools]
-go = "1.25"
+go = "1.26"
 air = "latest"
 golangci-lint = "latest"
 "ubi:tailwindlabs/tailwindcss" = "4.1.18"
