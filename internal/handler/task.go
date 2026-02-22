@@ -876,3 +876,72 @@ func (h *Handler) HandleUpdateColumn(c fiber.Ctx) error {
 
 	return render(c, views.ColumnUpdateResponse(*taskWithDeps, orgID, oldColumnID, tasksByColumn, columns))
 }
+
+// HandleTaskWithId renders the board page with a task's detail pane pre-opened if requested via URL.
+// GET /orgs/:org_id/projects/:project_id/tasks/:id
+func (h *Handler) HandleTaskWithId(c fiber.Ctx) error {
+	orgID, projectID, err := parseOrgAndProject(c)
+	if err != nil {
+		return err
+	}
+
+	taskID, err := strconv.ParseInt(c.Params("id"), 10, 64)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "invalid task id")
+	}
+
+	user, err := middleware.GetCurrentUser(c)
+	if err != nil {
+		return c.Redirect().To("/login")
+	}
+
+	taskWithDeps, err := h.store.GetTaskWithDependencies(c.Context(), taskID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusNotFound, "task not found")
+	}
+
+	// Load comments
+	comments, err := h.store.ListTaskComments(c.Context(), taskID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to load comments")
+	}
+
+	commentTree := store.BuildCommentTree(comments, 3)
+
+	// Get all tasks and columns for the board
+	tasks, err := h.store.ListTasksByProject(c.Context(), projectID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to load tasks")
+	}
+
+	columns, err := h.store.GetProjectColumns(c.Context(), projectID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to load columns")
+	}
+
+	tasksByColumn := store.GroupTasksByColumn(tasks, columns)
+
+	// Get project info
+	project, err := h.store.GetProject(c.Context(), projectID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusNotFound, "project not found")
+	}
+
+	// Build nav context
+	orgs, err := h.store.GetUserOrganizations(c.Context(), user.ID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to load organizations")
+	}
+
+	nav := views.NavContext{
+		User:         user,
+		Orgs:         orgs,
+		CurrentOrgID: orgID,
+	}
+
+	// Update last viewed project
+	_ = h.store.UpdateLastViewedProject(c.Context(), user.ID, project.ID)
+
+	// Render board - the script will open the detail pane via htmx if task ID in URL
+	return render(c, views.BoardPageWithTask(project, columns, tasksByColumn, nav, taskWithDeps, commentTree, user))
+}

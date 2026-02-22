@@ -96,7 +96,7 @@ templ TaskDetailPane(taskWithDeps model.TaskWithDependencies, orgID int64, proje
 				<button
 					type="button"
 					class="close-pane-btn text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
-					onclick="document.getElementById('detail-pane').remove()"
+					onclick="document.getElementById('detail-pane').remove(); history.replaceState(null, '', window.location.pathname.replace(/\/tasks\/\d+$/, ''))"
 				>
 					<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -836,6 +836,7 @@ templ detailPaneScript() {
 		function handleEscape(e) {
 			if (e.key === 'Escape') {
 				pane.remove();
+				history.replaceState(null, "", window.location.pathname.replace(/\/tasks\/\d+$/, ""));
 				document.removeEventListener('keydown', handleEscape);
 			}
 		}
@@ -846,6 +847,7 @@ templ detailPaneScript() {
 			if (e.target === pane) {
 				pane.remove();
 				document.removeEventListener('keydown', handleEscape);
+				history.replaceState(null, "", window.location.pathname.replace(/\/tasks\/\d+$/, ""));
 			}
 		});
 

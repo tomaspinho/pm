@@ -20,6 +20,8 @@ templ TaskCard(task model.Task, orgID int64) {
 	<div
 		class="task-card bg-white rounded-lg shadow-sm border border-gray-200 p-3 cursor-grab active:cursor-grabbing hover:shadow-md transition-all duration-150"
 		data-id={ fmt.Sprintf("%d", task.ID) }
+		data-org-id={ fmt.Sprintf("%d", orgID) }
+		data-project-id={ fmt.Sprintf("%d", task.ProjectID) }
 		id={ "task-" + fmt.Sprintf("%d", task.ID) }
 	>
 		<div class="flex items-start gap-2">
@@ -34,10 +36,12 @@ templ TaskCard(task model.Task, orgID int64) {
 				</svg>
 			</span>
 			<div
-				class="flex-1 min-w-0 cursor-pointer"
+				class="flex-1 min-w-0 cursor-pointer task-card-content"
 				hx-get={ fmt.Sprintf("/orgs/%d/projects/%d/tasks/%d/detail", orgID, task.ProjectID, task.ID) }
 				hx-target="body"
 				hx-swap="beforeend"
+				data-url={ fmt.Sprintf("/orgs/%d/projects/%d/tasks/%d", orgID, task.ProjectID, task.ID) }
+				hx-on::after-request="history.pushState(null, '', this.dataset.url)"
 			>
 				<p class="text-sm font-medium text-gray-900 truncate">{ task.Title }</p>
 				if task.DueDate != nil {
@@ -56,10 +60,10 @@ templ TaskCard(task model.Task, orgID int64) {
 				type="button"
 				class="delete-btn shrink-0 text-gray-400 hover:text-red-500 transition-colors cursor-pointer"
 				hx-delete={ fmt.Sprintf("/orgs/%d/projects/%d/tasks/%d", orgID, task.ProjectID, task.ID) }
-			hx-target={ "#task-" + fmt.Sprintf("%d", task.ID) }
-			hx-swap="outerHTML swap:1s"
-			data-confirm-delete="true"
-			data-task-column-id={ fmt.Sprintf("%d", task.ColumnID) }
+				hx-target={ "#task-" + fmt.Sprintf("%d", task.ID) }
+				hx-swap="outerHTML swap:1s"
+				data-confirm-delete="true"
+				data-task-column-id={ fmt.Sprintf("%d", task.ColumnID) }
 			>
 				<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>

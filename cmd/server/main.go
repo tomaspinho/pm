@@ -129,6 +129,7 @@ func main() {
 	tasks.Patch("/:id/move", h.HandleMoveTask)
 	tasks.Delete("/:id", h.HandleDeleteTask)
 	tasks.Get("/:id/detail", h.HandleTaskDetail)
+	tasks.Get("/:id", h.HandleTaskWithId)
 	tasks.Patch("/:id", h.HandleUpdateTask)
 	tasks.Patch("/:id/column", h.HandleUpdateColumn)
 	tasks.Get("/:id/dependencies/check", h.HandleCheckDependencyCycle)
