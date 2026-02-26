@@ -14,7 +14,7 @@ templ SearchResultsPage(query string, tasks []model.TaskSearchResult, nav NavCon
 				<h1 class="text-2xl font-bold text-gray-900 mb-2">Search Results for "{ query }"</h1>
 				<p class="text-sm text-gray-500">{ fmt.Sprintf("%d result%s found", len(tasks), pluralize(len(tasks))) }</p>
 			</div>
-			
+
 			if len(tasks) == 0 {
 				<div class="text-center py-16">
 					<div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 mb-4">
