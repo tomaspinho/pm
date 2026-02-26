@@ -38,7 +38,7 @@ func (s *Store) CreateActivity(ctx context.Context, taskID, userID int64, action
 func (s *Store) GetTaskActivity(ctx context.Context, taskID int64) ([]model.TaskActivityRecord, error) {
 	var records []model.TaskActivityRecord
 	err := s.db.SelectContext(ctx, &records, `
-		SELECT 
+		SELECT
 			a.id,
 			a.action,
 			a.field_name,

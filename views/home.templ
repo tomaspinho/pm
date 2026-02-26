@@ -42,8 +42,8 @@ templ BoardPage(project model.Project, columns []model.ProjectColumn, tasksByCol
 			<!-- Kanban Board - Horizontally Scrollable, fills remaining height -->
 			<div class="flex-1 overflow-x-auto overflow-y-auto">
 				<div class="max-w-7xl mx-auto px-4 h-full">
-					<div 
-						id="kanban-board" 
+					<div
+						id="kanban-board"
 						class="grid gap-6 min-w-max h-full pb-4"
 						style={ templ.SafeCSS(fmt.Sprintf("grid-template-columns: repeat(%d, 320px)", len(columns))) }
 					>
@@ -85,8 +85,8 @@ templ EmptyColumnsState(project model.Project, orgID int64) {
 templ Column(column model.ProjectColumn, project model.Project, tasks []model.Task) {
 	<div class="flex flex-col min-w-0">
 		<div class="flex items-center gap-2 mb-3">
-			<div 
-				class="w-3 h-3 rounded-full shrink-0" 
+			<div
+				class="w-3 h-3 rounded-full shrink-0"
 				style={ templ.SafeCSS(fmt.Sprintf("background-color: %s", column.Color)) }
 			></div>
 			<h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">

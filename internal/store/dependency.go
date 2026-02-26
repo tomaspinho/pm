@@ -46,8 +46,8 @@ func (s *Store) GetTaskWithDependencies(ctx context.Context, taskID int64) (*mod
 
 	// Get tasks this depends on (blocked by) - WITH column info via JOIN
 	err = s.db.SelectContext(ctx, &result.BlockedBy, `
-		SELECT 
-			t.id, t.project_id, t.title, t.description, t.author, 
+		SELECT
+			t.id, t.project_id, t.title, t.description, t.author,
 			t.column_id, t.position, t.metadata, t.due_date,
 			t.created_at, t.updated_at, t.deleted_at,
 			pc.name as column_name,
@@ -55,7 +55,7 @@ func (s *Store) GetTaskWithDependencies(ctx context.Context, taskID int64) (*mod
 		FROM tasks t
 		INNER JOIN task_dependencies td ON t.id = td.depends_on_id
 		INNER JOIN project_columns pc ON t.column_id = pc.id
-		WHERE td.task_id = $1 
+		WHERE td.task_id = $1
 		  AND t.deleted_at IS NULL
 		  AND pc.deleted_at IS NULL
 		ORDER BY t.title
@@ -66,7 +66,7 @@ func (s *Store) GetTaskWithDependencies(ctx context.Context, taskID int64) (*mod
 
 	// Get tasks that depend on this (blocking) - WITH column info via JOIN
 	err = s.db.SelectContext(ctx, &result.Blocking, `
-		SELECT 
+		SELECT
 			t.id, t.project_id, t.title, t.description, t.author,
 			t.column_id, t.position, t.metadata, t.due_date,
 			t.created_at, t.updated_at, t.deleted_at,
@@ -75,7 +75,7 @@ func (s *Store) GetTaskWithDependencies(ctx context.Context, taskID int64) (*mod
 		FROM tasks t
 		INNER JOIN task_dependencies td ON t.id = td.task_id
 		INNER JOIN project_columns pc ON t.column_id = pc.id
-		WHERE td.depends_on_id = $1 
+		WHERE td.depends_on_id = $1
 		  AND t.deleted_at IS NULL
 		  AND pc.deleted_at IS NULL
 		ORDER BY t.title

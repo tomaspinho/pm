@@ -89,7 +89,7 @@ func (s *Store) CreateProjectColumn(ctx context.Context, projectID int64, name, 
 // UpdateProjectColumn updates a column's name and/or color.
 func (s *Store) UpdateProjectColumn(ctx context.Context, columnID int64, name, color string) error {
 	query := `
-		UPDATE project_columns 
+		UPDATE project_columns
 		SET name = $1, color = $2
 		WHERE id = $3 AND deleted_at IS NULL
 	`
@@ -129,8 +129,8 @@ func (s *Store) DeleteProjectColumn(ctx context.Context, columnID, targetColumnI
 	// Move all tasks from deleted column to target column
 	// They'll be appended at the end, maintaining their relative order
 	_, err = tx.ExecContext(ctx, `
-		UPDATE tasks 
-		SET column_id = $1, 
+		UPDATE tasks
+		SET column_id = $1,
 		    position = position + $2 + 1,
 		    updated_at = NOW()
 		WHERE column_id = $3 AND deleted_at IS NULL

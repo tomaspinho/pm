@@ -270,11 +270,11 @@ templ columnSetupScript(existingColumns []model.ProjectColumn, taskCounts map[in
 				var allRows = Array.from(container.querySelectorAll('.flex.items-center.gap-2'));
 				var otherColumns = allRows
 					.filter(function(r) { return r !== row && r.dataset.columnId; })
-					.map(function(r) { 
-						return { 
-							id: r.dataset.columnId, 
-							name: r.querySelector('input[type="text"]').value 
-						}; 
+					.map(function(r) {
+						return {
+							id: r.dataset.columnId,
+							name: r.querySelector('input[type="text"]').value
+						};
 					});
 
 				// Check if this is the last column

@@ -28,7 +28,7 @@ templ SearchResultsPage(query string, tasks []model.TaskSearchResult, nav NavCon
 			} else {
 				<div class="space-y-3">
 					for _, task := range tasks {
-						<a 
+						<a
 							href={ fmt.Sprintf("/orgs/%d/projects/%d/tasks/%d", nav.CurrentOrgID, task.ProjectID, task.ID) }
 							class="block bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md hover:border-indigo-300 transition-all cursor-pointer"
 							target="_blank"

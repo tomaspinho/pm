@@ -7,7 +7,7 @@ CREATE INDEX idx_tasks_title_trgm ON tasks USING gin (title gin_trgm_ops);
 CREATE INDEX idx_tasks_description_trgm ON tasks USING gin (description gin_trgm_ops);
 
 -- Composite index for filtering by project + active tasks
-CREATE INDEX IF NOT EXISTS idx_tasks_project_active 
+CREATE INDEX IF NOT EXISTS idx_tasks_project_active
     ON tasks(project_id) WHERE deleted_at IS NULL;
 
 -- +goose Down

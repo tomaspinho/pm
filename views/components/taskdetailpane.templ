@@ -557,7 +557,7 @@ templ DependencySection(taskWithDeps model.TaskWithDependencies, orgID int64) {
 						var html = '';
 						results.forEach(function(task, index) {
 							var isCurrentProject = task.project_id.toString() === projectID;
-							var bgClass = isCurrentProject 
+							var bgClass = isCurrentProject
 								? 'bg-indigo-50 hover:bg-indigo-100'
 								: 'bg-gray-100 hover:bg-gray-200';
 							var activeClass = index === selectedIndex ? 'ring-2 ring-indigo-500' : '';

@@ -105,8 +105,8 @@ func (s *Store) GetOrganizationMembers(ctx context.Context, orgID int64) ([]mode
 	err := s.db.SelectContext(ctx, &users, `
 		SELECT u.* FROM users u
 		INNER JOIN organization_members om ON u.id = om.user_id
-		WHERE om.organization_id = $1 
-		  AND om.deleted_at IS NULL 
+		WHERE om.organization_id = $1
+		  AND om.deleted_at IS NULL
 		  AND u.deleted_at IS NULL
 		ORDER BY u.display_name, u.email
 	`, orgID)
@@ -126,9 +126,9 @@ func (s *Store) SearchOrganizationMembers(ctx context.Context, orgID int64, quer
 		err := s.db.SelectContext(ctx, &users, `
 			SELECT u.* FROM users u
 			INNER JOIN organization_members om ON u.id = om.user_id
-			WHERE om.organization_id = $1 
+			WHERE om.organization_id = $1
 			  AND u.id != $2
-			  AND om.deleted_at IS NULL 
+			  AND om.deleted_at IS NULL
 			  AND u.deleted_at IS NULL
 			ORDER BY u.updated_at DESC
 			LIMIT $3
@@ -143,15 +143,15 @@ func (s *Store) SearchOrganizationMembers(ctx context.Context, orgID int64, quer
 	err := s.db.SelectContext(ctx, &users, `
 		SELECT u.* FROM users u
 		INNER JOIN organization_members om ON u.id = om.user_id
-		WHERE om.organization_id = $1 
+		WHERE om.organization_id = $1
 		  AND u.id != $2
-		  AND om.deleted_at IS NULL 
+		  AND om.deleted_at IS NULL
 		  AND u.deleted_at IS NULL
 		  AND (
 		    u.display_name ILIKE '%' || $3 || '%'
 		    OR u.email ILIKE '%' || $3 || '%'
 		  )
-		ORDER BY 
+		ORDER BY
 		  GREATEST(
 		    similarity(u.display_name, $3),
 		    similarity(u.email, $3)

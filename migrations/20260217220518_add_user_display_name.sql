@@ -3,7 +3,7 @@
 ALTER TABLE users ADD COLUMN display_name TEXT NOT NULL DEFAULT 'User';
 
 -- Update existing users to have a display name based on their email prefix
-UPDATE users 
+UPDATE users
 SET display_name = COALESCE(
     NULLIF(split_part(email, '@', 1), ''),
     'User'
@@ -11,7 +11,7 @@ SET display_name = COALESCE(
 WHERE display_name = 'User' OR display_name = '';
 
 -- Add constraint to ensure display name is not empty (must have content after trimming)
-ALTER TABLE users ADD CONSTRAINT check_display_name_not_empty 
+ALTER TABLE users ADD CONSTRAINT check_display_name_not_empty
     CHECK (length(trim(display_name)) > 0 AND length(display_name) <= 100);
 
 -- Remove the default after adding the constraint (force explicit values going forward)

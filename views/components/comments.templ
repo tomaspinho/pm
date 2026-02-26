@@ -255,7 +255,7 @@ script showCommentEditForm(commentID string) {
 	var form = document.getElementById('comment-edit-form-' + commentID);
 	var textarea = form.querySelector('textarea');
 	if (textarea) {
-		setTimeout(function() { 
+		setTimeout(function() {
 			textarea.focus();
 			// Move cursor to end
 			textarea.setSelectionRange(textarea.value.length, textarea.value.length);

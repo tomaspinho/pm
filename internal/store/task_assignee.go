@@ -39,7 +39,7 @@ func (s *Store) AssignUserToTask(ctx context.Context, taskID, userID int64) erro
 // UnassignUserFromTask removes a user from a task.
 func (s *Store) UnassignUserFromTask(ctx context.Context, taskID, userID int64) error {
 	_, err := s.db.ExecContext(ctx, `
-		DELETE FROM task_assignees 
+		DELETE FROM task_assignees
 		WHERE task_id = $1 AND user_id = $2
 	`, taskID, userID)
 	if err != nil {
@@ -68,7 +68,7 @@ func (s *Store) GetUserTasks(ctx context.Context, orgID, userID int64) ([]model.
 		SELECT t.* FROM tasks t
 		INNER JOIN task_assignees ta ON t.id = ta.task_id
 		INNER JOIN projects p ON t.project_id = p.id
-		WHERE ta.user_id = $1 
+		WHERE ta.user_id = $1
 		  AND p.organization_id = $2
 		  AND t.deleted_at IS NULL
 		  AND p.deleted_at IS NULL
