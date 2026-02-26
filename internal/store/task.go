@@ -4,11 +4,26 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 
 	"pm/internal/model"
 )
+
+// normalizeQuery cleans and normalizes a search query to improve typo resilience
+// Trims whitespace, collapses multiple spaces, and removes unnecessary special characters
+func normalizeQuery(query string) string {
+	multiSpace := regexp.MustCompile(`\s+`)
+	specialChars := regexp.MustCompile(`[^a-zA-Z0-9\s\-]`)
+
+	query = strings.TrimSpace(query)
+	query = multiSpace.ReplaceAllString(query, " ")
+	query = specialChars.ReplaceAllString(query, "")
+	query = strings.TrimSpace(query)
+
+	return query
+}
 
 // ListTasksByProject returns all active (non-deleted) tasks for a project.
 func (s *Store) ListTasksByProject(ctx context.Context, projectID int64) ([]model.Task, error) {
@@ -179,7 +194,7 @@ func (s *Store) CountTasksByColumn(ctx context.Context, projectID int64, columnI
 // UpdateTask updates a task's basic fields.
 func (s *Store) UpdateTask(ctx context.Context, taskID int64, title, description, author string, dueDate *time.Time) error {
 	query := `
-		UPDATE tasks 
+		UPDATE tasks
 		SET title = $1, description = $2, author = $3, due_date = $4, updated_at = NOW()
 		WHERE id = $5 AND deleted_at IS NULL
 	`
@@ -193,7 +208,7 @@ func (s *Store) UpdateTask(ctx context.Context, taskID int64, title, description
 // UpdateTaskMetadata updates the entire metadata JSON for a task.
 func (s *Store) UpdateTaskMetadata(ctx context.Context, taskID int64, metadata model.TaskMetadata) error {
 	query := `
-		UPDATE tasks 
+		UPDATE tasks
 		SET metadata = $1, updated_at = NOW()
 		WHERE id = $2 AND deleted_at IS NULL
 	`
@@ -251,7 +266,7 @@ func (s *Store) SetMetadataKey(ctx context.Context, taskID int64, key string, va
 	}
 
 	query := `
-		UPDATE tasks 
+		UPDATE tasks
 		SET metadata = jsonb_set(metadata, $1, $2::jsonb, true),
 		    updated_at = NOW()
 		WHERE id = $3 AND deleted_at IS NULL
@@ -268,7 +283,7 @@ func (s *Store) SetMetadataKey(ctx context.Context, taskID int64, key string, va
 // DeleteMetadataKey removes a key from the task's metadata.
 func (s *Store) DeleteMetadataKey(ctx context.Context, taskID int64, key string) error {
 	query := `
-		UPDATE tasks 
+		UPDATE tasks
 		SET metadata = metadata - $1,
 		    updated_at = NOW()
 		WHERE id = $2 AND deleted_at IS NULL
@@ -340,42 +355,95 @@ func (s *Store) UpdateTaskColumn(ctx context.Context, taskID int64, newColumnID 
 // Prioritizes exact substring matches, then fuzzy matches, then recent tasks.
 // Returns up to 'limit' results ordered by relevance.
 func (s *Store) SearchOrganizationTasks(ctx context.Context, orgID int64, query string, excludeTaskID int64, limit int) ([]model.TaskSearchResult, error) {
-	sql := `
-		SELECT 
-			t.id,
-			t.title,
-			LEFT(t.description, 100) as description,
-			t.project_id,
-			p.name as project_name,
-			t.column_id,
-			pc.name as column_name,
-			pc.color as column_color,
-			t.author,
-			t.due_date
-		FROM tasks t
-		INNER JOIN projects p ON t.project_id = p.id
-		INNER JOIN project_columns pc ON t.column_id = pc.id
-		WHERE p.organization_id = $1
-		  AND t.deleted_at IS NULL
-		  AND p.deleted_at IS NULL
-		  AND pc.deleted_at IS NULL
-		  AND t.id != $2
-		  AND (
-			  t.title ILIKE '%' || $3 || '%'
-			  OR t.description ILIKE '%' || $3 || '%'
-			  OR similarity(t.title, $3) > 0.2
-			  OR similarity(t.description, $3) > 0.15
-		  )
-		ORDER BY 
-			CASE WHEN t.title ILIKE '%' || $3 || '%' THEN 1 ELSE 2 END,
-			similarity(t.title, $3) DESC,
-			similarity(t.description, $3) DESC,
-			t.updated_at DESC
-		LIMIT $4
-	`
+	normalizedQuery := normalizeQuery(query)
 
 	var results []model.TaskSearchResult
-	err := s.db.SelectContext(ctx, &results, sql, orgID, excludeTaskID, query, limit)
+	var err error
+
+	if strings.Contains(normalizedQuery, " ") && len(normalizedQuery) > 5 {
+		words := strings.Fields(normalizedQuery)
+		if len(words) >= 2 {
+			var wordMatches []string
+			var args []interface{}
+			for i, word := range words {
+				argIndex := i + 5
+				wordMatches = append(wordMatches, fmt.Sprintf("similarity(t.title, $%d) > 0.15", argIndex))
+				wordMatches = append(wordMatches, fmt.Sprintf("similarity(t.description, $%d) > 0.10", argIndex+len(words)))
+				args = append(args, word, word)
+			}
+
+			sql := `
+				SELECT
+					t.id,
+					t.title,
+					LEFT(t.description, 100) as description,
+					t.project_id,
+					p.name as project_name,
+					t.column_id,
+					pc.name as column_name,
+					pc.color as column_color,
+					t.author,
+					t.due_date
+				FROM tasks t
+				INNER JOIN projects p ON t.project_id = p.id
+				INNER JOIN project_columns pc ON t.column_id = pc.id
+				WHERE p.organization_id = $1
+				  AND t.deleted_at IS NULL
+				  AND p.deleted_at IS NULL
+				  AND pc.deleted_at IS NULL
+				  AND t.id != $2
+				  AND t.title ILIKE '%' || $3 || '%'
+				  AND (
+					` + strings.Join(wordMatches, "\n\t\t\t\tOR ") + `
+				  )
+				ORDER BY
+					t.updated_at DESC
+				LIMIT $4
+			`
+
+			args = append([]interface{}{orgID, excludeTaskID, normalizedQuery}, args...)
+			args = append(args, limit)
+			err = s.db.SelectContext(ctx, &results, sql, args...)
+		}
+	}
+
+	if len(results) == 0 {
+		sql := `
+			SELECT
+				t.id,
+				t.title,
+				LEFT(t.description, 100) as description,
+				t.project_id,
+				p.name as project_name,
+				t.column_id,
+				pc.name as column_name,
+				pc.color as column_color,
+				t.author,
+				t.due_date
+			FROM tasks t
+			INNER JOIN projects p ON t.project_id = p.id
+			INNER JOIN project_columns pc ON t.column_id = pc.id
+			WHERE p.organization_id = $1
+			  AND t.deleted_at IS NULL
+			  AND p.deleted_at IS NULL
+			  AND pc.deleted_at IS NULL
+			  AND t.id != $2
+			  AND (
+				  t.title ILIKE '%' || $3 || '%'
+				  OR t.description ILIKE '%' || $3 || '%'
+				  OR similarity(t.title, $3) > 0.15
+				  OR similarity(t.description, $3) > 0.10
+			  )
+			ORDER BY
+				CASE WHEN t.title ILIKE '%' || $3 || '%' THEN 1 ELSE 2 END,
+				similarity(t.title, $3) DESC,
+				similarity(t.description, $3) DESC,
+				t.updated_at DESC
+			LIMIT $4
+		`
+		err = s.db.SelectContext(ctx, &results, sql, orgID, excludeTaskID, normalizedQuery, limit)
+	}
+
 	if err != nil {
 		return nil, fmt.Errorf("searching tasks: %w", err)
 	}
@@ -387,7 +455,7 @@ func (s *Store) SearchOrganizationTasks(ctx context.Context, orgID int64, query 
 // projects in an organization. Used for the default dropdown state.
 func (s *Store) GetRecentOrganizationTasks(ctx context.Context, orgID int64, excludeTaskID int64, limit int) ([]model.TaskSearchResult, error) {
 	sql := `
-		SELECT 
+		SELECT
 			t.id,
 			t.title,
 			LEFT(t.description, 100) as description,
