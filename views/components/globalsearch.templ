@@ -154,26 +154,34 @@ templ GlobalSearch(orgID int64, projectID int64) {
 
 		// Handle keyboard navigation
 		input.addEventListener('keydown', function(e) {
-			if (currentResults.length === 0) return;
+			if (e.key === 'Enter') {
+				e.preventDefault();
+				var query = input.value.trim();
 
-			if (e.key === 'ArrowDown') {
-				e.preventDefault();
-				selectedIndex = (selectedIndex + 1) % currentResults.length;
-				updateActiveItem();
-			} else if (e.key === 'ArrowUp') {
-				e.preventDefault();
-				selectedIndex = (selectedIndex - 1 + currentResults.length) % currentResults.length;
-				updateActiveItem();
-			} else if (e.key === 'Enter') {
+				// If a dropdown item is selected, open it in a new tab
 				if (selectedIndex >= 0 && selectedIndex < currentResults.length) {
-					e.preventDefault();
 					var task = currentResults[selectedIndex];
 					var url = '/orgs/' + orgID + '/projects/' + task.project_id + '/tasks/' + task.id;
 					window.open(url, '_blank');
 					dropdown.classList.add('hidden');
 					input.value = '';
+				} else if (query.length >= 2) {
+					// No item selected or dropdown closed - navigate to full search page
+					window.location.href = '/orgs/' + orgID + '/search?q=' + encodeURIComponent(query);
 				}
-			} else if (e.key === 'Escape') {
+			} else if (currentResults.length > 0) {
+				if (e.key === 'ArrowDown') {
+					e.preventDefault();
+					selectedIndex = (selectedIndex + 1) % currentResults.length;
+					updateActiveItem();
+				} else if (e.key === 'ArrowUp') {
+					e.preventDefault();
+					selectedIndex = (selectedIndex - 1 + currentResults.length) % currentResults.length;
+					updateActiveItem();
+				}
+			}
+
+			if (e.key === 'Escape') {
 				dropdown.classList.add('hidden');
 				selectedIndex = -1;
 			}
