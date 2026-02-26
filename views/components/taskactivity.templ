@@ -97,18 +97,18 @@ templ ActivityMessage(action string, fieldName string, oldValue interface{}, new
 // Helper function to format timestamp as absolute date
 func formatActivityTime(t time.Time) string {
 	now := time.Now()
-	
+
 	// If within today, format as time only
 	if now.Day() == t.Day() && now.Month() == t.Month() && now.Year() == t.Year() {
 		return t.Format("3:04 PM")
 	}
-	
+
 	// If yesterday
 	yesterday := now.AddDate(0, 0, -1)
 	if yesterday.Day() == t.Day() && yesterday.Month() == t.Month() && yesterday.Year() == t.Year() {
 		return "Yesterday"
 	}
-	
+
 	// Otherwise format as full date
 	return t.Format("Jan 2, 2006")
 }
