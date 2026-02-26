@@ -59,9 +59,10 @@ func (h *Handler) HandleBoard(c fiber.Ctx) error {
 	}
 
 	nav := views.NavContext{
-		User:         user,
-		Orgs:         orgs,
-		CurrentOrgID: orgID,
+		User:             user,
+		Orgs:             orgs,
+		CurrentOrgID:     orgID,
+		CurrentProjectID: projectID,
 	}
 
 	// Track last viewed project.

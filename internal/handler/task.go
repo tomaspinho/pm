@@ -247,7 +247,6 @@ func (h *Handler) HandleTaskDetail(c fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to load activity")
 	}
 
-
 	return render(c, views.TaskDetailPane(*taskWithDeps, orgID, projectID, commentTree, user, activity))
 }
 
@@ -426,6 +425,84 @@ func (h *Handler) HandleSearchTasks(c fiber.Ctx) error {
 	}
 
 	return c.JSON(results)
+}
+
+// HandleGlobalSearchAutocomplete searches tasks for navigation autocomplete
+// Returns prioritized results split by current project
+// GET /orgs/:org_id/search/tasks?q=query&project_id=123
+func (h *Handler) HandleGlobalSearchAutocomplete(c fiber.Ctx) error {
+	orgID, err := strconv.ParseInt(c.Params("org_id"), 10, 64)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "invalid org id")
+	}
+
+	query := c.Query("q", "")
+	projectID, _ := strconv.ParseInt(c.Query("project_id"), 10, 64)
+	limit := 10
+
+	if len(query) < 2 {
+		// Return empty results for short queries
+		return c.JSON(fiber.Map{
+			"current_project": []model.TaskSearchResult{},
+			"other_projects":  []model.TaskSearchResult{},
+		})
+	}
+
+	currentTasks, otherTasks, err := h.store.SearchTasksForAutocomplete(
+		c.Context(), orgID, query, limit, projectID,
+	)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to search tasks")
+	}
+
+	return c.JSON(fiber.Map{
+		"current_project": currentTasks,
+		"other_projects":  otherTasks,
+	})
+}
+
+// HandleGlobalSearchResults displays a full search results page
+// GET /orgs/:org_id/search?q=query
+func (h *Handler) HandleGlobalSearchResults(c fiber.Ctx) error {
+	orgID, err := strconv.ParseInt(c.Params("org_id"), 10, 64)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "invalid org id")
+	}
+
+	query := c.Query("q", "")
+	limit := 50
+
+	var tasks []model.TaskSearchResult
+
+	if len(query) < 2 {
+		// Return empty results for short queries
+		tasks = []model.TaskSearchResult{}
+	} else {
+		tasks, err = h.store.SearchOrganizationTasks(c.Context(), orgID, query, 0, limit)
+		if err != nil {
+			return fiber.NewError(fiber.StatusInternalServerError, "failed to search tasks")
+		}
+	}
+
+	user, err := middleware.GetCurrentUser(c)
+	if err != nil {
+		return c.Redirect().To("/login")
+	}
+
+	// Get user's organizations for navigation
+	orgs, err := h.store.GetUserOrganizations(c.Context(), user.ID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to load organizations")
+	}
+
+	nav := views.NavContext{
+		User:             user,
+		Orgs:             orgs,
+		CurrentOrgID:     orgID,
+		CurrentProjectID: 0,
+	}
+
+	return render(c, views.SearchResultsPage(query, tasks, nav))
 }
 
 // HandleCheckDependencyCycle checks if adding a dependency would create a circular dependency
@@ -934,9 +1011,10 @@ func (h *Handler) HandleTaskWithId(c fiber.Ctx) error {
 	}
 
 	nav := views.NavContext{
-		User:         user,
-		Orgs:         orgs,
-		CurrentOrgID: orgID,
+		User:             user,
+		Orgs:             orgs,
+		CurrentOrgID:     orgID,
+		CurrentProjectID: projectID,
 	}
 
 	// Update last viewed project

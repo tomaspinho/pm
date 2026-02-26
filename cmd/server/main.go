@@ -100,7 +100,11 @@ func main() {
 	// Organization member listing.
 	org.Get("/members", h.HandleGetOrgMembers)
 
-	// Task search (org-wide).
+	// Global search (org-wide).
+	org.Get("/search", h.HandleGlobalSearchResults)
+	org.Get("/search/tasks", h.HandleGlobalSearchAutocomplete)
+
+	// Task search (org-wide - for dependency lookups).
 	org.Get("/tasks/search", h.HandleSearchTasks)
 
 	// User search (org-wide).

@@ -56,9 +56,10 @@ func (h *Handler) HandleProjectPicker(c fiber.Ctx) error {
 	if orgIDStr == "" {
 		// No orgs at all — show empty state.
 		nav := views.NavContext{
-			User:         user,
-			Orgs:         orgs,
-			CurrentOrgID: 0,
+			User:             user,
+			Orgs:             orgs,
+			CurrentOrgID:     0,
+			CurrentProjectID: 0,
 		}
 		return render(c, views.ProjectPickerPage(user, orgs, nil, nil, nav))
 	}
@@ -89,9 +90,10 @@ func (h *Handler) HandleProjectPicker(c fiber.Ctx) error {
 	}
 
 	nav := views.NavContext{
-		User:         user,
-		Orgs:         orgs,
-		CurrentOrgID: orgID,
+		User:             user,
+		Orgs:             orgs,
+		CurrentOrgID:     orgID,
+		CurrentProjectID: 0,
 	}
 
 	return render(c, views.ProjectPickerPage(user, orgs, currentOrg, projects, nav))
@@ -116,9 +118,10 @@ func (h *Handler) HandleShowCreateProject(c fiber.Ctx) error {
 	}
 
 	nav := views.NavContext{
-		User:         user,
-		Orgs:         orgs,
-		CurrentOrgID: orgID,
+		User:             user,
+		Orgs:             orgs,
+		CurrentOrgID:     orgID,
+		CurrentProjectID: 0,
 	}
 
 	return render(c, views.NewProjectPage(orgID, nav))
@@ -194,9 +197,10 @@ func (h *Handler) HandleShowColumnSetup(c fiber.Ctx) error {
 	}
 
 	nav := views.NavContext{
-		User:         user,
-		Orgs:         orgs,
-		CurrentOrgID: orgID,
+		User:             user,
+		Orgs:             orgs,
+		CurrentOrgID:     orgID,
+		CurrentProjectID: projectID,
 	}
 
 	return render(c, views.ColumnSetupPage(project, orgID, existingColumns, taskCounts, nav))

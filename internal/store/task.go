@@ -419,6 +419,51 @@ func (s *Store) GetRecentOrganizationTasks(ctx context.Context, orgID int64, exc
 	return results, nil
 }
 
+// SearchTasksForAutocomplete searches tasks in the organization and splits results
+// by current project for prioritized display
+func (s *Store) SearchTasksForAutocomplete(ctx context.Context, orgID int64, query string, limit int, currentProjectID int64) ([]model.TaskSearchResult, []model.TaskSearchResult, error) {
+	// Get search results with higher limit to account for splitting
+	searchLimit := limit * 2
+	results, err := s.SearchOrganizationTasks(ctx, orgID, query, 0, searchLimit)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Split into current project and other projects
+	var currentProjectTasks []model.TaskSearchResult
+	var otherProjectTasks []model.TaskSearchResult
+
+	if currentProjectID > 0 {
+		for _, task := range results {
+			if task.ProjectID == currentProjectID {
+				currentProjectTasks = append(currentProjectTasks, task)
+			} else {
+				otherProjectTasks = append(otherProjectTasks, task)
+			}
+			// Stop once we have enough results from each category
+			if len(currentProjectTasks) >= limit && len(otherProjectTasks) >= limit {
+				break
+			}
+		}
+	} else {
+		// No current project, treat all as "other projects"
+		otherProjectTasks = results
+		if len(otherProjectTasks) > limit {
+			otherProjectTasks = otherProjectTasks[:limit]
+		}
+	}
+
+	// Trim to limit
+	if len(currentProjectTasks) > limit {
+		currentProjectTasks = currentProjectTasks[:limit]
+	}
+	if len(otherProjectTasks) > limit {
+		otherProjectTasks = otherProjectTasks[:limit]
+	}
+
+	return currentProjectTasks, otherProjectTasks, nil
+}
+
 // WouldCreateCycle checks if adding a dependency would create a circular dependency chain
 func (s *Store) WouldCreateCycle(ctx context.Context, taskID, dependsOnID int64) (bool, error) {
 	// Check if dependsOnID eventually depends on taskID (which would create a cycle)

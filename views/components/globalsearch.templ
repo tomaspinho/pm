@@ -1,0 +1,223 @@
+package components
+
+import (
+	"fmt"
+)
+
+// GlobalSearch renders the navigation bar search input with autocomplete
+templ GlobalSearch(orgID int64, projectID int64) {
+	<div class="relative max-w-md" id="global-search-container">
+		if projectID > 0 {
+			<input
+				type="text"
+				id="global-search"
+				placeholder="Search tasks..."
+				autocomplete="off"
+				class="w-full text-sm border border-gray-300 rounded-lg px-4 py-2 bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 placeholder-gray-400"
+				data-org-id={ fmt.Sprintf("%d", orgID) }
+				data-project-id={ fmt.Sprintf("%d", projectID) }
+			/>
+		} else {
+			<input
+				type="text"
+				id="global-search"
+				placeholder="Search tasks..."
+				autocomplete="off"
+				class="w-full text-sm border border-gray-300 rounded-lg px-4 py-2 bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 placeholder-gray-400"
+				data-org-id={ fmt.Sprintf("%d", orgID) }
+			/>
+		}
+		<div id="global-search-dropdown" class="hidden absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-96 overflow-y-auto"></div>
+	</div>
+	<script>
+	(function() {
+		var input = document.getElementById('global-search');
+		var dropdown = document.getElementById('global-search-dropdown');
+		var orgID = input.getAttribute('data-org-id');
+		var projectID = input.getAttribute('data-project-id');
+		if (!projectID) projectID = '0';
+
+		var debounceTimer = null;
+		var selectedIndex = -1;
+		var currentResults = [];
+		var currentQuery = '';
+
+		// Escape HTML to prevent XSS
+		function escapeHtml(text) {
+			var div = document.createElement('div');
+			div.textContent = text;
+			return div.innerHTML;
+		}
+
+		// Load search results
+		function loadSearch(query) {
+			if (!orgID) return;
+
+			var url = '/orgs/' + orgID + '/search/tasks?q=' + encodeURIComponent(query);
+			if (parseInt(projectID) > 0) {
+				url += '&project_id=' + projectID;
+			}
+
+			fetch(url)
+				.then(function(response) {
+					if (!response.ok) throw new Error('Search failed');
+					return response.json();
+				})
+				.then(function(data) {
+					currentResults = data.current_project || [];
+					currentResults = currentResults.concat(data.other_projects || []);
+					currentQuery = query;
+					renderDropdown(query, data.current_project, data.other_projects);
+				})
+				.catch(function(err) {
+					console.error('Search error:', err);
+					dropdown.innerHTML = '<div class="p-4 text-sm text-gray-500">Search error</div>';
+				});
+		}
+
+		// Render dropdown with results
+		function renderDropdown(query, currentProjectTasks, otherProjectTasks) {
+			var html = '';
+
+			// Show current project tasks if available
+			if (currentProjectTasks && currentProjectTasks.length > 0) {
+				html += '<div class="px-4 py-2 text-xs font-semibold text-gray-500 bg-gray-50 border-b border-gray-200">Current Project</div>';
+				currentProjectTasks.forEach(function(task, index) {
+					html += renderTaskItem(task, index, true);
+				});
+			}
+
+			// Show other project tasks
+			if (otherProjectTasks && otherProjectTasks.length > 0) {
+				if (currentProjectTasks && currentProjectTasks.length > 0) {
+					html += '<div class="px-4 py-2 text-xs font-semibold text-gray-500 bg-gray-50 border-b border-gray-200">Other Projects</div>';
+				}
+				var startIndex = (currentProjectTasks && currentProjectTasks.length > 0) ? currentProjectTasks.length : 0;
+				otherProjectTasks.forEach(function(task, index) {
+					html += renderTaskItem(task, startIndex + index, false);
+				});
+			}
+
+			// Show "view all" link if we have results
+			if ((currentProjectTasks && currentProjectTasks.length > 0) || (otherProjectTasks && otherProjectTasks.length > 0)) {
+				html += '<a href="/orgs/' + orgID + '/search?q=' + encodeURIComponent(query) + '" class="block px-4 py-3 text-sm text-indigo-600 hover:bg-gray-50 border-t border-gray-200 cursor-pointer">View all results →</a>';
+			} else if (query) {
+				html += '<div class="p-4 text-sm text-gray-500">No results found</div>';
+			}
+
+			dropdown.innerHTML = html;
+			dropdown.classList.remove('hidden');
+			selectedIndex = -1;
+		}
+
+		// Render individual task item
+		function renderTaskItem(task, index, isCurrentProject) {
+			var bgClass = isCurrentProject
+				? 'bg-indigo-50 hover:bg-indigo-100'
+				: 'bg-gray-100 hover:bg-gray-200';
+			var activeClass = index === selectedIndex ? 'ring-2 ring-indigo-500' : '';
+
+			var taskUrl = '/orgs/' + orgID + '/projects/' + task.project_id + '/tasks/' + task.id;
+
+			var html = '<button type="button" class="w-full text-left px-4 py-3 ' + bgClass + ' ' + activeClass + ' transition-colors border-b border-gray-200 last:border-b-0 cursor-pointer" data-task-index="' + index + '" data-task-url="' + taskUrl + '">';
+			html += '  <div class="flex items-center gap-2 mb-1">';
+			html += '    <span class="w-2 h-2 rounded-full flex-shrink-0" style="background-color: ' + escapeHtml(task.column_color) + '"></span>';
+			html += '    <span class="text-sm font-medium text-gray-900 flex-1 truncate">' + escapeHtml(task.title) + '</span>';
+			if (!isCurrentProject) {
+				html += '    <span class="text-xs text-gray-600 px-1.5 py-0.5 bg-white/50 rounded truncate max-w-24" title="' + escapeHtml(task.project_name) + '">' + escapeHtml(task.project_name) + '</span>';
+			}
+			html += '  </div>';
+			if (task.description) {
+				html += '  <div class="text-xs text-gray-600 truncate ml-4">' + escapeHtml(task.description) + '</div>';
+			}
+			html += '</button>';
+
+			return html;
+		}
+
+		// Handle input changes with debounce
+		input.addEventListener('input', function(e) {
+			var query = e.target.value.trim();
+			clearTimeout(debounceTimer);
+
+			selectedIndex = -1;
+
+			if (query.length === 0) {
+				dropdown.classList.add('hidden');
+				return;
+			}
+
+			debounceTimer = setTimeout(function() {
+				loadSearch(query);
+			}, 300);
+		});
+
+		// Handle keyboard navigation
+		input.addEventListener('keydown', function(e) {
+			if (currentResults.length === 0) return;
+
+			if (e.key === 'ArrowDown') {
+				e.preventDefault();
+				selectedIndex = (selectedIndex + 1) % currentResults.length;
+				updateActiveItem();
+			} else if (e.key === 'ArrowUp') {
+				e.preventDefault();
+				selectedIndex = (selectedIndex - 1 + currentResults.length) % currentResults.length;
+				updateActiveItem();
+			} else if (e.key === 'Enter') {
+				if (selectedIndex >= 0 && selectedIndex < currentResults.length) {
+					e.preventDefault();
+					var task = currentResults[selectedIndex];
+					var url = '/orgs/' + orgID + '/projects/' + task.project_id + '/tasks/' + task.id;
+					window.open(url, '_blank');
+					dropdown.classList.add('hidden');
+					input.value = '';
+				}
+			} else if (e.key === 'Escape') {
+				dropdown.classList.add('hidden');
+				selectedIndex = -1;
+			}
+		});
+
+		// Update active item styling
+		function updateActiveItem() {
+			var buttons = dropdown.querySelectorAll('button[data-task-index]');
+			buttons.forEach(function(btn) {
+				var index = parseInt(btn.getAttribute('data-task-index'));
+				if (index === selectedIndex) {
+					btn.classList.add('ring-2', 'ring-indigo-500');
+				} else {
+					btn.classList.remove('ring-2', 'ring-indigo-500');
+				}
+			});
+		}
+
+		// Handle click on dropdown items
+		dropdown.addEventListener('click', function(e) {
+			var button = e.target.closest('button[data-task-url]');
+			if (button) {
+				var url = button.getAttribute('data-task-url');
+				window.open(url, '_blank');
+				dropdown.classList.add('hidden');
+				input.value = '';
+			}
+		});
+
+		// Close dropdown when clicking outside
+		document.addEventListener('click', function(e) {
+			if (!e.target.closest('#global-search-container')) {
+				dropdown.classList.add('hidden');
+				selectedIndex = -1;
+			}
+		});
+
+		// Focus input on keyboard shortcut (Ctrl/Cmd + K)
+		document.addEventListener('keydown', function(e) {
+			if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+				e.preventDefault();
+				input.focus();
+			}
+		});
+	})();
+	</script>
+}
