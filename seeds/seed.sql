@@ -34,6 +34,19 @@ VALUES
     (3, 1, 'Done', '#10B981', 2)
 ON CONFLICT (id) DO NOTHING;
 
+-- Default labels for project 1 (My Project)
+INSERT INTO project_labels (id, project_id, name, color, position)
+VALUES
+    (1, 1, 'Bug', '#EF4444', 0),
+    (2, 1, 'Feature', '#3B82F6', 1),
+    (3, 1, 'Documentation', '#6B7280', 2),
+    (4, 1, 'Urgent', '#F59E0B', 3),
+    (5, 1, 'DevOps', '#8B5CF6', 4),
+    (6, 1, 'Backend', '#10B981', 5),
+    (7, 1, 'Frontend', '#EC4899', 6),
+    (8, 1, 'Security', '#14B8A6', 7)
+ON CONFLICT (id) DO NOTHING;
+
 -- Example tasks in different columns
 -- Note: column_id 1 = To Do, 2 = In Progress, 3 = Done (from columns above)
 INSERT INTO tasks (id, project_id, title, description, column_id, position, author, metadata)
@@ -50,6 +63,15 @@ VALUES
     (3, 4)  -- "Implement user auth" depends on "Write database migrations"
 ON CONFLICT (task_id, depends_on_id) DO NOTHING;
 
+-- Task labels for project 1
+INSERT INTO task_labels (task_id, label_id)
+VALUES
+    (1, 5), (1, 6), (1, 2),  -- Set up CI pipeline: DevOps, Backend, Feature
+    (2, 7), (2, 3), (2, 2),  -- Design landing page: Frontend, Documentation, Feature
+    (3, 6), (3, 8), (3, 4),  -- Implement user auth: Backend, Security, Urgent
+    (4, 6), (4, 3)           -- Write database migrations: Backend, Documentation
+ON CONFLICT (task_id, label_id) DO NOTHING;
+
 -- Second project with 100 tasks for testing search and dependencies
 INSERT INTO projects (id, name, description, organization_id)
 VALUES (2, 'E-Commerce Platform', 'Large scale e-commerce application with 100+ tasks', 1)
@@ -61,6 +83,19 @@ VALUES
     (4, 2, 'Backlog', '#6B7280', 0),
     (5, 2, 'Active', '#F59E0B', 1),
     (6, 2, 'Completed', '#10B981', 2)
+ON CONFLICT (id) DO NOTHING;
+
+-- Labels for project 2 (E-Commerce Platform)
+INSERT INTO project_labels (id, project_id, name, color, position)
+VALUES
+    (9, 2, 'Critical', '#EF4444', 0),
+    (10, 2, 'High Priority', '#F59E0B', 1),
+    (11, 2, 'Development', '#3B82F6', 2),
+    (12, 2, 'Design', '#EC4899', 3),
+    (13, 2, 'Infrastructure', '#8B5CF6', 4),
+    (14, 2, 'Testing', '#10B981', 5),
+    (15, 2, 'Frontend', '#14B8A6', 6),
+    (16, 2, 'Backend', '#6B7280', 7)
 ON CONFLICT (id) DO NOTHING;
 
 -- 100 tasks spread across the 3 columns (roughly 40/35/25 distribution)
@@ -189,9 +224,123 @@ VALUES
     (176, 1)  -- Choose tech stack
 ON CONFLICT (task_id, user_id) DO NOTHING;
 
+-- Task labels for project 2 (E-Commerce Platform)
+-- Backlog tasks labels (IDs 100-139)
+INSERT INTO task_labels (task_id, label_id) VALUES
+    (100, 11), (100, 16), (100, 10),
+    (101, 4), (101, 2), (101, 12),
+    (102, 9), (102, 10), (102, 16),
+    (103, 11), (103, 16),
+    (104, 11), (104, 16),
+    (105, 11), (105, 16),
+    (106, 11), (105, 15),
+    (107, 4), (107, 12), (107, 2),
+    (108, 11), (108, 16), (108, 10),
+    (109, 4), (109, 2),
+    (110, 5), (110, 13),
+    (111, 11), (101, 15),
+    (112, 11),
+    (113, 11), (112, 16),
+    (114, 4), (105, 12),
+    (115, 5), (106, 13),
+    (116, 11), (115, 16),
+    (117, 11),
+    (118, 11), (117, 16),
+    (119, 11),
+    (120, 11), (119, 15),
+    (121, 11), (120, 15),
+    (122, 11),
+    (123, 5), (123, 13),
+    (124, 11),
+    (125, 11),
+    (126, 4), (125, 2),
+    (127, 9), (127, 10), (127, 16),
+    (128, 11), (128, 16),
+    (129, 11), (128, 15),
+    (130, 5), (129, 13), (130, 9),
+    (131, 11), (130, 15),
+    (132, 11),
+    (133, 11),
+    (134, 11),
+    (135, 9), (135, 10), (135, 16),
+    (136, 11),
+    (137, 5), (136, 13), (137, 9),
+    (138, 9), (138, 8), (138, 16),
+    (139, 11), (138, 15)
+ON CONFLICT (task_id, label_id) DO NOTHING;
+
+-- Active tasks labels (IDs 140-174)
+INSERT INTO task_labels (task_id, label_id) VALUES
+    (140, 9), (140, 10), (140, 11), (140, 16),
+    (141, 4), (141, 2), (141, 12), (141, 15),
+    (142, 11), (142, 16),
+    (143, 11), (143, 15),
+    (144, 11), (144, 15),
+    (145, 9), (145, 10), (145, 11), (145, 16),
+    (146, 4), (146, 2), (146, 12), (146, 15),
+    (147, 11),
+    (148, 11), (148, 16),
+    (149, 11), (149, 15),
+    (150, 11), (150, 15),
+    (151, 9), (151, 10), (151, 11), (151, 15),
+    (152, 11), (152, 15),
+    (153, 5), (154, 13),
+    (154, 9), (154, 8), (154, 16),
+    (155, 11),
+    (156, 11), (156, 15),
+    (157, 11), (157, 15),
+    (158, 4), (158, 2), (158, 12),
+    (159, 11), (158, 15),
+    (160, 5), (159, 13), (160, 10),
+    (161, 11), (161, 15),
+    (162, 11), (162, 15),
+    (163, 4), (162, 2),
+    (164, 9), (164, 10), (164, 11), (164, 16),
+    (165, 11), (165, 15),
+    (166, 4), (165, 2),
+    (167, 9), (167, 10), (167, 8),
+    (168, 11), (168, 15),
+    (169, 11),
+    (170, 9), (169, 10), (169, 5), (170, 13),
+    (171, 11), (171, 16),
+    (172, 9), (172, 10), (172, 8), (172, 16),
+    (173, 4), (172, 2),
+    (174, 11), (174, 15)
+ON CONFLICT (task_id, label_id) DO NOTHING;
+
+-- Completed tasks labels (IDs 175-199)
+INSERT INTO task_labels (task_id, label_id) VALUES
+    (175, 9), (175, 10), (175, 5), (175, 13), (175, 11), (175, 16),
+    (176, 9), (176, 10), (176, 11), (176, 16),
+    (177, 10), (177, 4), (177, 2),
+    (178, 9), (178, 10), (178, 11), (178, 16),
+    (179, 9), (179, 10), (179, 5), (179, 13),
+    (180, 10), (180, 11),
+    (181, 11),
+    (182, 9), (182, 10), (182, 4), (182, 2), (182, 12), (183, 15),
+    (183, 9), (183, 10), (183, 5), (183, 11), (183, 13),
+    (184, 11), (184, 2),
+    (185, 9), (185, 10), (185, 5), (185, 11), (185, 13),
+    (186, 9), (186, 10), (186, 5), (186, 11), (186, 16),
+    (187, 9), (187, 10), (187, 4), (187, 12),
+    (188, 10), (188, 11), (188, 16),
+    (189, 9), (189, 10), (189, 5), (189, 11),
+    (190, 9), (190, 10), (190, 4), (190, 2), (190, 12), (191, 15),
+    (191, 9), (191, 10), (191, 11), (191, 16),
+    (192, 11), (192, 2),
+    (193, 11), (193, 2),
+    (194, 11), (195, 15),
+    (195, 10), (195, 5), (195, 11), (195, 13),
+    (196, 9), (196, 10), (196, 8), (196, 2),
+    (197, 9), (197, 10), (197, 8), (197, 11), (197, 16),
+    (198, 9), (198, 10), (198, 5), (198, 11), (198, 13),
+    (199, 11), (199, 2)
+ON CONFLICT (task_id, label_id) DO NOTHING;
+
 -- Reset sequences to avoid conflicts with future inserts.
 SELECT setval('users_id_seq', (SELECT COALESCE(MAX(id), 0) FROM users));
 SELECT setval('organizations_id_seq', (SELECT COALESCE(MAX(id), 0) FROM organizations));
 SELECT setval('projects_id_seq', (SELECT COALESCE(MAX(id), 0) FROM projects));
 SELECT setval('project_columns_id_seq', (SELECT COALESCE(MAX(id), 0) FROM project_columns));
+SELECT setval('project_labels_id_seq', (SELECT COALESCE(MAX(id), 0) FROM project_labels));
 SELECT setval('tasks_id_seq', (SELECT COALESCE(MAX(id), 1) FROM tasks));
