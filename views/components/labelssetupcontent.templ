@@ -40,6 +40,7 @@ templ LabelSetupContent(labels []model.Label, labelCounts map[int64]int, orgID i
 		</form>
 	</div>
 	<div id="label-data" style="display:none" data-labels={ serializeLabelsJSON(labels) } data-task-counts={ serializeLabelTaskCountsJSON(labelCounts) }></div>
+	@labelSetupScript(labels, labelCounts)
 }
 
 templ labelSetupScript(labels []model.Label, labelCounts map[int64]int) {
@@ -270,20 +271,24 @@ templ labelSetupScript(labels []model.Label, labelCounts map[int64]int) {
 			}
 		}
 		
-		document.addEventListener('DOMContentLoaded', function() {
-			for (var i = 0; i < existingLabels.length; i++) {
-				var label = existingLabels[i];
-				var taskCount = labelCounts[label.id] || 0;
-				addLabel(label.name, label.color, label.id, taskCount);
-			}
-			
-			initSortable();
-			
-			document.getElementById('add-label-btn').addEventListener('click', function() {
+		for (var i = 0; i < existingLabels.length; i++) {
+			var label = existingLabels[i];
+			var taskCount = labelCounts[label.id] || 0;
+			addLabel(label.name, label.color, label.id, taskCount);
+		}
+		
+		initSortable();
+		
+		var addLabelBtn = document.getElementById('add-label-btn');
+		if (addLabelBtn) {
+			addLabelBtn.addEventListener('click', function() {
 				addLabel();
 			});
-			
-			document.getElementById('label-form').addEventListener('submit', function(e) {
+		}
+		
+		var labelForm = document.getElementById('label-form');
+		if (labelForm) {
+			labelForm.addEventListener('submit', function(e) {
 				reindexLabels();
 				
 				var container = document.getElementById('labels-container');
@@ -337,7 +342,8 @@ templ labelSetupScript(labels []model.Label, labelCounts map[int64]int) {
 					modalContainer.appendChild(modal);
 				}
 			});
-		})();
+		}
+	})();
 	</script>
 }
 
