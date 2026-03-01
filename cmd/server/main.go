@@ -119,10 +119,9 @@ func main() {
 	org.Get("/projects/:project_id/settings", h.HandleShowSettings)
 	org.Post("/projects/:project_id/settings", h.HandleSaveColumnSetup)
 
-	org.Post("/projects/:project_id/settings/labels", h.HandleCreateLabel)
+	org.Post("/projects/:project_id/settings/labels", h.HandleSaveLabelSetup)
 	org.Delete("/projects/:project_id/labels/:id", h.HandleDeleteLabel)
 	org.Patch("/projects/:project_id/labels/:id", h.HandleUpdateLabel)
-	org.Post("/projects/:project_id/labels/reorder", h.HandleReorderLabels)
 
 	// Project settings (column management for existing projects).
 	org.Get("/projects/:project_id/settings", h.HandleShowColumnSetup)

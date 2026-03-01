@@ -5,15 +5,13 @@ CREATE TABLE project_labels (
     project_id BIGINT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
     name VARCHAR(50) NOT NULL,
     color VARCHAR(7) NOT NULL,
-    position INT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     deleted_at TIMESTAMP
 );
 
 -- Unique partial indexes (excluding soft-deleted rows)
 CREATE UNIQUE INDEX unique_project_label_name ON project_labels(project_id, name) WHERE deleted_at IS NULL;
-CREATE UNIQUE INDEX unique_project_label_position ON project_labels(project_id, position) WHERE deleted_at IS NULL;
-CREATE INDEX idx_project_labels_project ON project_labels(project_id, position) WHERE deleted_at IS NULL;
+CREATE INDEX idx_project_labels_project ON project_labels(project_id) WHERE deleted_at IS NULL;
 
 -- Junction table for task-label many-to-many relationship
 CREATE TABLE task_labels (

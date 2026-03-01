@@ -14,7 +14,7 @@ templ LabelSetupContent(labels []model.Label, labelCounts map[int64]int, orgID i
 				<label class="block text-sm font-medium text-gray-700">Labels</label>
 				<p class="text-xs text-gray-500">
 					if len(labels) > 0 {
-						Edit names and colors, delete, reorder, or add new labels
+						Edit names and colors, delete, or add new labels
 					} else {
 						No labels yet. Add labels to categorize and prioritize your tasks.
 					}
@@ -52,7 +52,6 @@ templ labelSetupScript(labels []model.Label, labelCounts map[int64]int) {
 		
 		var colors = ['#6B7280', '#EF4444', '#F59E0B', '#10B981', '#3B82F6', '#8B5CF6', '#EC4899', '#14B8A6'];
 		var labelIndex = 0;
-		var labelsToDelete = {};
 		
 		function createLabelRow(name, color, labelId, taskCount) {
 			name = name || '';
@@ -69,10 +68,7 @@ templ labelSetupScript(labels []model.Label, labelCounts map[int64]int) {
 			
 			var idInput = labelId ? '<input type="hidden" name="labels[' + index + '][id]" value="' + labelId + '" />' : '';
 			
-			row.innerHTML = '<div class="flex-shrink-0 w-8 h-8 cursor-move drag-handle flex items-center justify-center text-gray-400 hover:text-gray-600">' +
-				'<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
-				'<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"></path></svg></div>' +
-				'<div class="flex-shrink-0"><div class="w-6 h-6 rounded-full border-2 border-white shadow-sm" style="background-color: ' + color + ';" data-color="' + color + '"></div></div>' +
+			row.innerHTML = '<div class="flex-shrink-0"><div class="w-6 h-6 rounded-full border-2 border-white shadow-sm" style="background-color: ' + color + ';" data-color="' + color + '"></div></div>' +
 				'<input type="text" name="labels[' + index + '][name]" value="' + escapeHtml(name) + '" placeholder="Label name" required ' +
 				'class="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" />' +
 				idInput +
@@ -258,26 +254,11 @@ templ labelSetupScript(labels []model.Label, labelCounts map[int64]int) {
 			labelIndex = rows.length;
 		}
 		
-		function initSortable() {
-			var container = document.getElementById('labels-container');
-			if (typeof Sortable !== 'undefined') {
-				new Sortable(container, {
-					handle: '.drag-handle',
-					animation: 150,
-					onEnd: function() {
-						reindexLabels();
-					}
-				});
-			}
-		}
-		
 		for (var i = 0; i < existingLabels.length; i++) {
 			var label = existingLabels[i];
 			var taskCount = labelCounts[label.id] || 0;
 			addLabel(label.name, label.color, label.id, taskCount);
 		}
-		
-		initSortable();
 		
 		var addLabelBtn = document.getElementById('add-label-btn');
 		if (addLabelBtn) {

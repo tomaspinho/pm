@@ -7,7 +7,6 @@ type Label struct {
 	ProjectID int64      `db:"project_id" json:"project_id"`
 	Name      string     `db:"name"       json:"name"`
 	Color     string     `db:"color"      json:"color"`
-	Position  int        `db:"position"   json:"position"`
 	CreatedAt time.Time  `db:"created_at" json:"created_at"`
 	DeletedAt *time.Time `db:"deleted_at" json:"deleted_at,omitempty"`
 }

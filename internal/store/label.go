@@ -7,11 +7,11 @@ import (
 	"pm/internal/model"
 )
 
-// GetProjectLabels returns all active labels for a project, ordered by position.
+// GetProjectLabels returns all active labels for a project, ordered alphabetically by name.
 func (s *Store) GetProjectLabels(ctx context.Context, projectID int64) ([]model.Label, error) {
 	var labels []model.Label
 	err := s.db.SelectContext(ctx, &labels,
-		"SELECT * FROM project_labels WHERE project_id = $1 AND deleted_at IS NULL ORDER BY position",
+		"SELECT * FROM project_labels WHERE project_id = $1 AND deleted_at IS NULL ORDER BY name",
 		projectID,
 	)
 	if err != nil {
@@ -51,18 +51,9 @@ func (s *Store) GetTaskLabels(ctx context.Context, taskID int64) ([]model.Label,
 // CreateProjectLabel creates a single label for a project.
 func (s *Store) CreateProjectLabel(ctx context.Context, projectID int64, name, color string) (*model.Label, error) {
 	var label model.Label
-
-	var maxPos int
-	err := s.db.GetContext(ctx, &maxPos,
-		"SELECT COALESCE(MAX(position), -1) FROM project_labels WHERE project_id = $1 AND deleted_at IS NULL",
-		projectID)
-	if err != nil {
-		return nil, fmt.Errorf("getting max label position: %w", err)
-	}
-
-	err = s.db.GetContext(ctx, &label,
-		"INSERT INTO project_labels (project_id, name, color, position) VALUES ($1, $2, $3, $4) RETURNING *",
-		projectID, name, color, maxPos+1)
+	err := s.db.GetContext(ctx, &label,
+		"INSERT INTO project_labels (project_id, name, color) VALUES ($1, $2, $3) RETURNING *",
+		projectID, name, color)
 	if err != nil {
 		return nil, fmt.Errorf("creating label: %w", err)
 	}
@@ -91,20 +82,6 @@ func (s *Store) DeleteProjectLabel(ctx context.Context, labelID int64) error {
 		labelID)
 	if err != nil {
 		return fmt.Errorf("deleting label %d: %w", labelID, err)
-	}
-	return nil
-}
-
-// ReorderLabels updates the position of all labels in a project based on the provided order.
-func (s *Store) ReorderLabels(ctx context.Context, projectID int64, labelIDs []int64) error {
-	for i, labelID := range labelIDs {
-		_, err := s.db.ExecContext(ctx,
-			"UPDATE project_labels SET position = $1 WHERE id = $2 AND project_id = $3 AND deleted_at IS NULL",
-			i, labelID, projectID,
-		)
-		if err != nil {
-			return fmt.Errorf("updating position for label %d: %w", labelID, err)
-		}
 	}
 	return nil
 }

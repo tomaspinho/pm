@@ -35,16 +35,16 @@ VALUES
 ON CONFLICT (id) DO NOTHING;
 
 -- Default labels for project 1 (My Project)
-INSERT INTO project_labels (id, project_id, name, color, position)
+INSERT INTO project_labels (id, project_id, name, color)
 VALUES
-    (1, 1, 'Bug', '#EF4444', 0),
-    (2, 1, 'Feature', '#3B82F6', 1),
-    (3, 1, 'Documentation', '#6B7280', 2),
-    (4, 1, 'Urgent', '#F59E0B', 3),
-    (5, 1, 'DevOps', '#8B5CF6', 4),
-    (6, 1, 'Backend', '#10B981', 5),
-    (7, 1, 'Frontend', '#EC4899', 6),
-    (8, 1, 'Security', '#14B8A6', 7)
+    (1, 1, 'Bug', '#EF4444'),
+    (2, 1, 'Feature', '#3B82F6'),
+    (3, 1, 'Documentation', '#6B7280'),
+    (4, 1, 'Urgent', '#F59E0B'),
+    (5, 1, 'DevOps', '#8B5CF6'),
+    (6, 1, 'Backend', '#10B981'),
+    (7, 1, 'Frontend', '#EC4899'),
+    (8, 1, 'Security', '#14B8A6')
 ON CONFLICT (id) DO NOTHING;
 
 -- Example tasks in different columns
@@ -86,16 +86,16 @@ VALUES
 ON CONFLICT (id) DO NOTHING;
 
 -- Labels for project 2 (E-Commerce Platform)
-INSERT INTO project_labels (id, project_id, name, color, position)
+INSERT INTO project_labels (id, project_id, name, color)
 VALUES
-    (9, 2, 'Critical', '#EF4444', 0),
-    (10, 2, 'High Priority', '#F59E0B', 1),
-    (11, 2, 'Development', '#3B82F6', 2),
-    (12, 2, 'Design', '#EC4899', 3),
-    (13, 2, 'Infrastructure', '#8B5CF6', 4),
-    (14, 2, 'Testing', '#10B981', 5),
-    (15, 2, 'Frontend', '#14B8A6', 6),
-    (16, 2, 'Backend', '#6B7280', 7)
+    (9, 2, 'Critical', '#EF4444'),
+    (10, 2, 'High Priority', '#F59E0B'),
+    (11, 2, 'Development', '#3B82F6'),
+    (12, 2, 'Design', '#EC4899'),
+    (13, 2, 'Infrastructure', '#8B5CF6'),
+    (14, 2, 'Testing', '#10B981'),
+    (15, 2, 'Frontend', '#14B8A6'),
+    (16, 2, 'Backend', '#6B7280')
 ON CONFLICT (id) DO NOTHING;
 
 -- 100 tasks spread across the 3 columns (roughly 40/35/25 distribution)

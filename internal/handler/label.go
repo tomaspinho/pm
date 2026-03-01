@@ -1,9 +1,9 @@
 package handler
 
 import (
-	"encoding/json"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"pm/internal/middleware"
 	"pm/views"
@@ -95,6 +95,102 @@ func (h *Handler) HandleGetLabels(c fiber.Ctx) error {
 	}
 
 	return c.JSON(labels)
+}
+
+// HandleSaveLabelSetup processes the label setup form.
+// POST /orgs/:org_id/projects/:project_id/settings/labels
+func (h *Handler) HandleSaveLabelSetup(c fiber.Ctx) error {
+	orgID, err := strconv.ParseInt(c.Params("org_id"), 10, 64)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "invalid org_id")
+	}
+
+	projectID, err := strconv.ParseInt(c.Params("project_id"), 10, 64)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "invalid project_id")
+	}
+
+	type labelUpdate struct {
+		ID    *int64
+		Name  string
+		Color string
+	}
+
+	var labels []labelUpdate
+
+	for i := 0; ; i++ {
+		nameKey := fmt.Sprintf("labels[%d][name]", i)
+		colorKey := fmt.Sprintf("labels[%d][color]", i)
+		idKey := fmt.Sprintf("labels[%d][id]", i)
+
+		name := c.FormValue(nameKey)
+		if name == "" {
+			break
+		}
+
+		color := c.FormValue(colorKey)
+		idStr := c.FormValue(idKey)
+
+		lbl := labelUpdate{
+			Name:  name,
+			Color: color,
+		}
+
+		if idStr != "" {
+			id, err := strconv.ParseInt(idStr, 10, 64)
+			if err == nil {
+				lbl.ID = &id
+			}
+		}
+
+		labels = append(labels, lbl)
+	}
+
+	nameSet := make(map[string]bool)
+	for _, lbl := range labels {
+		lowerName := strings.ToLower(strings.TrimSpace(lbl.Name))
+		if nameSet[lowerName] {
+			return fiber.NewError(fiber.StatusBadRequest, fmt.Sprintf("duplicate label name: %s", lbl.Name))
+		}
+		nameSet[lowerName] = true
+	}
+
+	existingLabels, err := h.store.GetProjectLabels(c.Context(), projectID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to load existing labels")
+	}
+
+	formLabelIDs := make(map[int64]bool)
+	for _, lbl := range labels {
+		if lbl.ID != nil {
+			formLabelIDs[*lbl.ID] = true
+		}
+	}
+
+	for _, existing := range existingLabels {
+		if !formLabelIDs[existing.ID] {
+			err = h.store.DeleteProjectLabel(c.Context(), existing.ID)
+			if err != nil {
+				return fiber.NewError(fiber.StatusInternalServerError, fmt.Sprintf("failed to delete label: %v", err))
+			}
+		}
+	}
+
+	for _, lbl := range labels {
+		if lbl.ID != nil {
+			err = h.store.UpdateProjectLabel(c.Context(), *lbl.ID, lbl.Name, lbl.Color)
+			if err != nil {
+				return fiber.NewError(fiber.StatusInternalServerError, fmt.Sprintf("failed to update label: %v", err))
+			}
+		} else {
+			_, err = h.store.CreateProjectLabel(c.Context(), projectID, lbl.Name, lbl.Color)
+			if err != nil {
+				return fiber.NewError(fiber.StatusInternalServerError, fmt.Sprintf("failed to create label: %v", err))
+			}
+		}
+	}
+
+	return c.Redirect().To(fmt.Sprintf("/orgs/%d/projects/%d/settings", orgID, projectID))
 }
 
 // HandleCreateLabel creates a new label for a project
@@ -208,28 +304,6 @@ func (h *Handler) HandleDeleteLabel(c fiber.Ctx) error {
 	err = h.store.DeleteProjectLabel(c.Context(), labelID)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to delete label")
-	}
-
-	return c.SendStatus(fiber.StatusNoContent)
-}
-
-// HandleReorderLabels updates the position of all labels in a project
-// POST /orgs/:org_id/projects/:project_id/labels/reorder
-func (h *Handler) HandleReorderLabels(c fiber.Ctx) error {
-	projectID, err := strconv.ParseInt(c.Params("project_id"), 10, 64)
-	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, "invalid project_id")
-	}
-
-	var labelIDs []int64
-	err = json.Unmarshal(c.Body(), &labelIDs)
-	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, "invalid request body")
-	}
-
-	err = h.store.ReorderLabels(c.Context(), projectID, labelIDs)
-	if err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, "failed to reorder labels")
 	}
 
 	return c.SendStatus(fiber.StatusNoContent)
