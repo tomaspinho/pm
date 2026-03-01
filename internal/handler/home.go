@@ -4,6 +4,7 @@ import (
 	"strconv"
 
 	"pm/internal/middleware"
+	"pm/internal/model"
 	"pm/internal/store"
 	"pm/views"
 
@@ -47,6 +48,21 @@ func (h *Handler) HandleBoard(c fiber.Ctx) error {
 
 	grouped := store.GroupTasksByColumn(tasks, columns)
 
+	// Load project labels
+	labels, err := h.store.GetProjectLabels(ctx, project.ID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to load labels")
+	}
+
+	// Load labels for each task
+	tasksWithLabels := make(map[int64][]model.Label)
+	for _, task := range tasks {
+		taskLabels, err := h.store.GetTaskLabels(ctx, task.ID)
+		if err == nil {
+			tasksWithLabels[task.ID] = taskLabels
+		}
+	}
+
 	// Build nav context.
 	user, err := middleware.GetCurrentUser(c)
 	if err != nil {
@@ -68,5 +84,5 @@ func (h *Handler) HandleBoard(c fiber.Ctx) error {
 	// Track last viewed project.
 	_ = h.store.UpdateLastViewedProject(ctx, user.ID, project.ID)
 
-	return render(c, views.BoardPage(project, columns, grouped, nav))
+	return render(c, views.BoardPage(project, columns, grouped, labels, tasksWithLabels, nav))
 }

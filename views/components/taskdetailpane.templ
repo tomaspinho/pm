@@ -87,7 +87,7 @@ func formatDueDate(task model.Task) string {
 	return formatted
 }
 // TaskDetailPane renders the slide-out detail pane for a task.
-templ TaskDetailPane(taskWithDeps model.TaskWithDependencies, orgID int64, projectID int64, comments []model.CommentThread, currentUser *model.User, activity []model.TaskActivityRecord) {
+templ TaskDetailPane(taskWithDeps model.TaskWithDependencies, orgID int64, projectID int64, comments []model.CommentThread, currentUser *model.User, activity []model.TaskActivityRecord, labels []model.Label, allLabels []model.Label) {
 	<div id="detail-pane" class="detail-pane-backdrop fixed inset-0 bg-gray-900/50 backdrop-blur-sm z-50 flex justify-end">
 		<div class="detail-pane-panel bg-white w-full max-w-2xl h-full shadow-2xl overflow-y-auto">
 			<!-- Header -->
@@ -295,6 +295,8 @@ templ TaskDetailPane(taskWithDeps model.TaskWithDependencies, orgID int64, proje
 				</div>
 				<!-- Assignees -->
 				@AssigneeSection(taskWithDeps.ID, taskWithDeps.Assignees, orgID, taskWithDeps.ProjectID, *currentUser)
+				<!-- Labels -->
+				@LabelSection(taskWithDeps.ID, labels, allLabels, orgID, taskWithDeps.ProjectID, *currentUser)
 				<!-- Due Date -->
 				<div class="space-y-2">
 					<label class="block text-xs font-medium text-gray-500 uppercase tracking-wide">Due Date</label>
@@ -1172,4 +1174,40 @@ templ DueDateForm(taskWithDeps model.TaskWithDependencies, orgID int64) {
 			</div>
 		</form>
 	</div>
+}
+
+// Label dropdown initialization script (for htmx swapped content)
+script LabelDropdownScripts(taskID int64) {
+	(function() {
+		var section = document.getElementById('label-section-' + taskID);
+		if (!section) return;
+
+		var dropdown = document.getElementById('label-dropdown-' + taskID);
+		var listContainer = document.getElementById('label-list-container-' + taskID);
+		var button = section.querySelector('.add-label-btn');
+
+		if (!button || !dropdown) return;
+
+		function handleClickOutside(e) {
+			if (!dropdown.contains(e.target) && !button.contains(e.target)) {
+				dropdown.classList.add('hidden');
+				if (listContainer) listContainer.classList.remove('hidden');
+				document.removeEventListener('click', handleClickOutside);
+			}
+		}
+
+		button.addEventListener('click', function(e) {
+			e.stopPropagation();
+			var isOpen = !dropdown.classList.contains('hidden');
+			dropdown.classList.toggle('hidden', isOpen);
+			if (listContainer) listContainer.classList.toggle('hidden', !isOpen);
+			if (!isOpen) {
+				var rect = button.getBoundingClientRect();
+				dropdown.style.position = 'fixed';
+				dropdown.style.left = rect.left + 'px';
+				dropdown.style.top = (rect.bottom + 5) + 'px';
+				document.addEventListener('click', handleClickOutside);
+			}
+		});
+	})();
 }

@@ -247,7 +247,19 @@ func (h *Handler) HandleTaskDetail(c fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to load activity")
 	}
 
-	return render(c, views.TaskDetailPane(*taskWithDeps, orgID, projectID, commentTree, user, activity))
+	// Load task labels
+	labels, err := h.store.GetTaskLabels(c.Context(), taskID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to load labels")
+	}
+
+	// Load all project labels for dropdown
+	allLabels, err := h.store.GetProjectLabels(c.Context(), projectID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to load project labels")
+	}
+
+	return render(c, views.TaskDetailPane(*taskWithDeps, orgID, projectID, commentTree, user, activity, labels, allLabels))
 }
 
 // HandleUpdateTask updates a task's basic fields.
@@ -309,7 +321,13 @@ func (h *Handler) HandleUpdateTask(c fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to reload task")
 	}
 
-	return render(c, views.TaskFieldUpdateResponse(*taskWithDeps, orgID))
+	// Load task labels
+	taskLabels, err := h.store.GetTaskLabels(c.Context(), taskID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to load labels")
+	}
+
+	return render(c, views.TaskFieldUpdateResponse(*taskWithDeps, orgID, taskLabels))
 }
 
 // HandleAddDependency adds a dependency to a task.
@@ -484,22 +502,28 @@ func (h *Handler) HandleGlobalSearchResults(c fiber.Ctx) error {
 		}
 	}
 
+	// Load labels for each task
+	for i, task := range tasks {
+		taskLabels, err := h.store.GetTaskLabels(c.Context(), task.ID)
+		if err == nil {
+			tasks[i].Labels = taskLabels
+		}
+	}
+
 	user, err := middleware.GetCurrentUser(c)
 	if err != nil {
 		return c.Redirect().To("/login")
 	}
 
-	// Get user's organizations for navigation
 	orgs, err := h.store.GetUserOrganizations(c.Context(), user.ID)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to load organizations")
 	}
 
 	nav := views.NavContext{
-		User:             user,
-		Orgs:             orgs,
-		CurrentOrgID:     orgID,
-		CurrentProjectID: 0,
+		User:         user,
+		Orgs:         orgs,
+		CurrentOrgID: orgID,
 	}
 
 	return render(c, views.SearchResultsPage(query, tasks, nav))
@@ -951,7 +975,16 @@ func (h *Handler) HandleUpdateColumn(c fiber.Ctx) error {
 
 	tasksByColumn := store.GroupTasksByColumn(tasks, columns)
 
-	return render(c, views.ColumnUpdateResponse(*taskWithDeps, orgID, oldColumnID, tasksByColumn, columns))
+	// Load labels for each task
+	tasksWithLabels := make(map[int64][]model.Label)
+	for _, task := range tasks {
+		taskLabels, err := h.store.GetTaskLabels(c.Context(), task.ID)
+		if err == nil {
+			tasksWithLabels[task.ID] = taskLabels
+		}
+	}
+
+	return render(c, views.ColumnUpdateResponse(*taskWithDeps, orgID, oldColumnID, tasksByColumn, tasksWithLabels, columns))
 }
 
 // HandleTaskWithId renders the board page with a task's detail pane pre-opened if requested via URL.
@@ -998,6 +1031,33 @@ func (h *Handler) HandleTaskWithId(c fiber.Ctx) error {
 
 	tasksByColumn := store.GroupTasksByColumn(tasks, columns)
 
+	// Load labels for each task
+	tasksWithLabels := make(map[int64][]model.Label)
+	for _, task := range tasks {
+		taskLabels, err := h.store.GetTaskLabels(c.Context(), task.ID)
+		if err == nil {
+			tasksWithLabels[task.ID] = taskLabels
+		}
+	}
+
+	// Load all project labels for dropdown
+	allLabels, err := h.store.GetProjectLabels(c.Context(), projectID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to load project labels")
+	}
+
+	// Load current task labels
+	taskLabels, err := h.store.GetTaskLabels(c.Context(), taskID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to load task labels")
+	}
+
+	// Load activity feed
+	activity, err := h.store.GetTaskActivity(c.Context(), taskID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to load activity")
+	}
+
 	// Get project info
 	project, err := h.store.GetProject(c.Context(), projectID)
 	if err != nil {
@@ -1021,5 +1081,5 @@ func (h *Handler) HandleTaskWithId(c fiber.Ctx) error {
 	_ = h.store.UpdateLastViewedProject(c.Context(), user.ID, project.ID)
 
 	// Render board - the script will open the detail pane via htmx if task ID in URL
-	return render(c, views.BoardPageWithTask(project, columns, tasksByColumn, nav, taskWithDeps, commentTree, user))
+	return render(c, views.BoardPageWithTask(project, columns, tasksByColumn, tasksWithLabels, allLabels, nav, taskWithDeps, commentTree, user, taskLabels, activity))
 }

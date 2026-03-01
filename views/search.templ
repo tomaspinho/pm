@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"pm/internal/model"
+	"pm/views/components"
 )
 
 // SearchResultsPage displays full search results
@@ -42,6 +43,13 @@ templ SearchResultsPage(query string, tasks []model.TaskSearchResult, nav NavCon
 									<h3 class="text-lg font-medium text-gray-900 mb-1 truncate">{ task.Title }</h3>
 									if task.Description != "" {
 										<p class="text-sm text-gray-600 line-clamp-2 mb-2">{ task.Description }</p>
+									}
+									if len(task.Labels) > 0 {
+										<div class="flex flex-wrap gap-1 mb-2">
+											for _, label := range task.Labels {
+												@components.LabelChip(label, false, nav.CurrentOrgID, task.ProjectID, task.ID)
+											}
+										</div>
 									}
 									<div class="flex items-center gap-2 text-xs text-gray-500">
 										<span>{ task.ProjectName }</span>

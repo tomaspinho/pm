@@ -19,6 +19,8 @@ type Task struct {
 	CreatedAt   time.Time    `db:"created_at"  json:"created_at"`
 	UpdatedAt   time.Time    `db:"updated_at"  json:"updated_at"`
 	DeletedAt   *time.Time   `db:"deleted_at"  json:"deleted_at,omitempty"`
+
+	Labels []Label `db:"-"          json:"labels,omitempty"`
 }
 
 // IsDeleted checks if the task is soft-deleted.
@@ -74,6 +76,7 @@ type TaskSearchResult struct {
 	ColumnColor string     `db:"column_color" json:"column_color"`
 	Author      string     `db:"author" json:"author"`
 	DueDate     *time.Time `db:"due_date" json:"due_date,omitempty"`
+	Labels      []Label    `db:"-" json:"labels,omitempty"`
 }
 
 // TaskActivityRecord represents a single activity record with user info.

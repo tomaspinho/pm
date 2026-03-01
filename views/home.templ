@@ -8,7 +8,7 @@ import (
 	"pm/views/components"
 )
 
-templ BoardPage(project model.Project, columns []model.ProjectColumn, tasksByColumn map[int64][]model.Task, nav NavContext) {
+templ BoardPage(project model.Project, columns []model.ProjectColumn, tasksByColumn map[int64][]model.Task, labels []model.Label, tasksWithLabels map[int64][]model.Label, nav NavContext) {
 	@BoardLayout(project.Name, nav) {
 		<!-- Project Header - Left Aligned with Settings Button -->
 		<div class="flex-shrink-0 py-6">
@@ -48,7 +48,7 @@ templ BoardPage(project model.Project, columns []model.ProjectColumn, tasksByCol
 						style={ templ.SafeCSS(fmt.Sprintf("grid-template-columns: repeat(%d, 320px)", len(columns))) }
 					>
 						for _, column := range columns {
-							@Column(column, project, tasksByColumn[column.ID])
+							@Column(column, project, tasksByColumn[column.ID], tasksWithLabels)
 						}
 					</div>
 				</div>
@@ -82,7 +82,7 @@ templ EmptyColumnsState(project model.Project, orgID int64) {
 	</div>
 }
 
-templ Column(column model.ProjectColumn, project model.Project, tasks []model.Task) {
+templ Column(column model.ProjectColumn, project model.Project, tasks []model.Task, tasksWithLabels map[int64][]model.Label) {
 	<div class="flex flex-col min-w-0">
 		<div class="flex items-center gap-2 mb-3">
 			<div
@@ -104,9 +104,9 @@ templ Column(column model.ProjectColumn, project model.Project, tasks []model.Ta
 			class="sortable-column flex flex-col gap-2 min-h-[120px] p-2 rounded-lg bg-gray-100/50 border border-transparent transition-all duration-200"
 			data-column-id={ fmt.Sprintf("%d", column.ID) }
 		>
-			for _, task := range tasks {
-				@components.TaskCard(task, project.OrganizationID)
-			}
+		for _, task := range tasks {
+		@components.TaskCard(task, tasksWithLabels[task.ID], project.OrganizationID)
+	}
 		</div>
 		<div id={ fmt.Sprintf("add-form-%d", column.ID) } class="mt-2">
 			@components.AddTaskButton(column.ID, project.OrganizationID, project.ID)
@@ -194,7 +194,7 @@ func intToStr(n int) string {
 
 // NewTaskResponse returns the new task card plus out-of-band updates.
 templ NewTaskResponse(task model.Task, orgID int64, columnID int64, count int) {
-	@components.TaskCard(task, orgID)
+	@components.TaskCard(task, nil, orgID)
 	<!-- Out-of-band: update count -->
 	<span id={ fmt.Sprintf("count-%d", columnID) } hx-swap-oob="true" class="text-xs text-gray-400 bg-gray-100 rounded-full px-2 py-0.5">
 		{ intToStr(count) }
@@ -213,8 +213,8 @@ templ DeleteTaskResponse(columnID int64, count int) {
 }
 
 // TaskDetailPane wraps the component for use in handlers.
-templ TaskDetailPane(taskWithDeps model.TaskWithDependencies, orgID int64, projectID int64, comments []model.CommentThread, currentUser *model.User, activity []model.TaskActivityRecord) {
-	@components.TaskDetailPane(taskWithDeps, orgID, projectID, comments, currentUser, activity)
+templ TaskDetailPane(taskWithDeps model.TaskWithDependencies, orgID int64, projectID int64, comments []model.CommentThread, currentUser *model.User, activity []model.TaskActivityRecord, labels []model.Label, allLabels []model.Label) {
+	@components.TaskDetailPane(taskWithDeps, orgID, projectID, comments, currentUser, activity, labels, allLabels)
 }
 
 // DependencySection wraps the component for use in handlers.
@@ -228,7 +228,7 @@ templ MetadataSection(taskID int64, orgID int64, projectID int64, metadata model
 }
 
 // TaskFieldUpdateResponse returns OOB updates for individual task fields (no full pane reload).
-templ TaskFieldUpdateResponse(taskWithDeps model.TaskWithDependencies, orgID int64) {
+templ TaskFieldUpdateResponse(taskWithDeps model.TaskWithDependencies, orgID int64, labels []model.Label) {
 	@components.TitleDisplay(taskWithDeps, orgID)
 	@components.DescriptionDisplay(taskWithDeps, orgID)
 	@components.AuthorDisplay(taskWithDeps, orgID)
@@ -239,12 +239,12 @@ templ TaskFieldUpdateResponse(taskWithDeps model.TaskWithDependencies, orgID int
 		id={ "task-" + fmt.Sprintf("%d", taskWithDeps.ID) }
 		hx-swap-oob="true"
 	>
-		@components.TaskCard(taskWithDeps.Task, orgID)
+		@components.TaskCard(taskWithDeps.Task, labels, orgID)
 	</div>
 }
 
 // ColumnUpdateResponse returns OOB updates for column badge and kanban columns (no full pane reload).
-templ ColumnUpdateResponse(taskWithDeps model.TaskWithDependencies, orgID int64, oldColumnID int64, tasksByColumn map[int64][]model.Task, columns []model.ProjectColumn) {
+templ ColumnUpdateResponse(taskWithDeps model.TaskWithDependencies, orgID int64, oldColumnID int64, tasksByColumn map[int64][]model.Task, tasksWithLabels map[int64][]model.Label, columns []model.ProjectColumn) {
 	<!-- Update column badge -->
 	@components.ColumnBadge(taskWithDeps, orgID, columns)
 	if oldColumnID != taskWithDeps.ColumnID {
@@ -256,7 +256,7 @@ templ ColumnUpdateResponse(taskWithDeps model.TaskWithDependencies, orgID int64,
 			hx-swap-oob="true"
 		>
 			for _, task := range tasksByColumn[oldColumnID] {
-				@components.TaskCard(task, orgID)
+				@components.TaskCard(task, tasksWithLabels[task.ID], orgID)
 			}
 		</div>
 		<!-- Out-of-band: update old column count -->
@@ -276,7 +276,7 @@ templ ColumnUpdateResponse(taskWithDeps model.TaskWithDependencies, orgID int64,
 		hx-swap-oob="true"
 	>
 		for _, task := range tasksByColumn[taskWithDeps.ColumnID] {
-			@components.TaskCard(task, orgID)
+			@components.TaskCard(task, tasksWithLabels[task.ID], orgID)
 		}
 	</div>
 	<!-- Out-of-band: update new column count -->
@@ -290,7 +290,7 @@ templ ColumnUpdateResponse(taskWithDeps model.TaskWithDependencies, orgID int64,
 }
 
 // BoardPageWithTask renders the board with a task's detail pane pre-opened.
-templ BoardPageWithTask(project model.Project, columns []model.ProjectColumn, tasksByColumn map[int64][]model.Task, nav NavContext, taskWithDeps *model.TaskWithDependencies, comments []model.CommentThread, user *model.User) {
+templ BoardPageWithTask(project model.Project, columns []model.ProjectColumn, tasksByColumn map[int64][]model.Task, tasksWithLabels map[int64][]model.Label, allLabels []model.Label, nav NavContext, taskWithDeps *model.TaskWithDependencies, comments []model.CommentThread, user *model.User, taskLabels []model.Label, activity []model.TaskActivityRecord) {
 	@BoardLayout(project.Name, nav) {
 		<div class="flex-shrink-0 py-6">
 			<div class="max-w-7xl mx-auto px-4 flex items-start justify-between">
@@ -327,7 +327,7 @@ templ BoardPageWithTask(project model.Project, columns []model.ProjectColumn, ta
 						style={ templ.SafeCSS(fmt.Sprintf("grid-template-columns: repeat(%d, 320px)", len(columns))) }
 					>
 						for _, column := range columns {
-							@Column(column, project, tasksByColumn[column.ID])
+							@Column(column, project, tasksByColumn[column.ID], tasksWithLabels)
 						}
 					</div>
 				</div>
@@ -335,6 +335,16 @@ templ BoardPageWithTask(project model.Project, columns []model.ProjectColumn, ta
 			<div id="kanban-data" style="display:none" data-org-id={ fmt.Sprintf("%d", project.OrganizationID) } data-project-id={ fmt.Sprintf("%d", project.ID) } data-task-id={ fmt.Sprintf("%d", taskWithDeps.ID) }></div>
 		}
 		<!-- Detail pane for pre-opened task -->
-		@TaskDetailPane(*taskWithDeps, nav.CurrentOrgID, project.ID, comments, user, nil)
+		@TaskDetailPane(*taskWithDeps, nav.CurrentOrgID, project.ID, comments, user, activity, taskLabels, allLabels)
 	}
 }
+
+
+templ LabelUpdateResponse(taskID int64, labels []model.Label, orgID int64, projectID int64) {
+	<div id={ "task-labels-" + fmt.Sprintf("%d", taskID) } hx-swap-oob="true">
+		for _, label := range labels {
+			@components.LabelChip(label, true, orgID, projectID, taskID)
+		}
+	</div>
+}
+

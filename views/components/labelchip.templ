@@ -1,0 +1,31 @@
+package components
+
+import (
+	"fmt"
+
+	"pm/internal/model"
+)
+
+templ LabelChip(label model.Label, showRemove bool, orgID int64, projectID int64, taskID int64) {
+	if showRemove {
+		<div class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border hover:shadow-sm transition-all group"
+		     style={ "background-color: " + label.Color + "; color: white; border-color: rgba(255,255,255,0.2)" }
+		     id={ "label-" + fmt.Sprintf("%d", label.ID) }
+		>
+			<span>{ label.Name }</span>
+			<span class="cursor-pointer hover:text-white/80 ml-1"
+		     hx-delete={ fmt.Sprintf("/orgs/%d/projects/%d/tasks/%d/labels/%d", orgID, projectID, taskID, label.ID) }
+		     hx-target={ "#label-section-" + fmt.Sprintf("%d", taskID) }
+		     hx-swap="outerHTML"
+		     title={ "Remove " + label.Name + " label" }
+      >×</span>
+		</div>
+	} else {
+		<div class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border"
+		     style={ "background-color: " + label.Color + "; color: white; border-color: rgba(255,255,255,0.2)" }
+		     title={ label.Name }
+		>
+			<span>{ label.Name }</span>
+		</div>
+	}
+}

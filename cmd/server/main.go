@@ -115,8 +115,14 @@ func main() {
 	org.Post("/projects", h.HandleCreateProject)
 
 	// Column setup (for new projects).
-	org.Get("/projects/:project_id/columns/setup", h.HandleShowColumnSetup)
-	org.Post("/projects/:project_id/columns/setup", h.HandleSaveColumnSetup)
+	// Settings
+	org.Get("/projects/:project_id/settings", h.HandleShowSettings)
+	org.Post("/projects/:project_id/settings", h.HandleSaveColumnSetup)
+
+	org.Post("/projects/:project_id/settings/labels", h.HandleCreateLabel)
+	org.Delete("/projects/:project_id/labels/:id", h.HandleDeleteLabel)
+	org.Patch("/projects/:project_id/labels/:id", h.HandleUpdateLabel)
+	org.Post("/projects/:project_id/labels/reorder", h.HandleReorderLabels)
 
 	// Project settings (column management for existing projects).
 	org.Get("/projects/:project_id/settings", h.HandleShowColumnSetup)
@@ -142,6 +148,10 @@ func main() {
 	tasks.Post("/:id/assign-self", h.HandleAssignSelf)
 	tasks.Post("/:id/assignees/:user_id", h.HandleAssignUser)
 	tasks.Delete("/:id/assignees/:user_id", h.HandleUnassign)
+
+	// Labels
+	tasks.Post("/:id/labels/:label_id", h.HandleAddLabelToTask)
+	tasks.Delete("/:id/labels/:label_id", h.HandleRemoveLabelFromTask)
 	tasks.Post("/:id/metadata", h.HandleAddMetadata)
 	tasks.Patch("/:id/metadata/:oldKey", h.HandleUpdateMetadata)
 	tasks.Delete("/:id/metadata/:key", h.HandleDeleteMetadata)
