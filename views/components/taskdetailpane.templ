@@ -1,10 +1,10 @@
 package components
 
 import (
-	"pm/internal/model"
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"pm/internal/model"
 	"sort"
 	"strings"
 )
@@ -86,6 +86,7 @@ func formatDueDate(task model.Task) string {
 	}
 	return formatted
 }
+
 // TaskDetailPane renders the slide-out detail pane for a task.
 templ TaskDetailPane(taskWithDeps model.TaskWithDependencies, orgID int64, projectID int64, comments []model.CommentThread, currentUser *model.User, activity []model.TaskActivityRecord, labels []model.Label, allLabels []model.Label) {
 	<div id="detail-pane" class="detail-pane-backdrop fixed inset-0 bg-gray-900/50 backdrop-blur-sm z-50 flex justify-end">
@@ -157,19 +158,19 @@ templ TaskDetailPane(taskWithDeps model.TaskWithDependencies, orgID int64, proje
 				</div>
 				<div id={ "dependency-section-" + fmt.Sprintf("%d", taskWithDeps.ID) }>
 					@DependencySection(taskWithDeps, orgID)
-			</div>
-			<!-- Metadata Section -->
-			<div id={ "metadata-section-" + fmt.Sprintf("%d", taskWithDeps.ID) }>
-				@MetadataSection(taskWithDeps.ID, orgID, taskWithDeps.ProjectID, taskWithDeps.Metadata)
-			</div>
-			<!-- Comments Section -->
-			<div id={ "comments-section-" + fmt.Sprintf("%d", taskWithDeps.ID) }>
-				@CommentSection(taskWithDeps.ID, orgID, projectID, comments, currentUser)
+				</div>
+				<!-- Metadata Section -->
+				<div id={ "metadata-section-" + fmt.Sprintf("%d", taskWithDeps.ID) }>
+					@MetadataSection(taskWithDeps.ID, orgID, taskWithDeps.ProjectID, taskWithDeps.Metadata)
+				</div>
+				<!-- Comments Section -->
+				<div id={ "comments-section-" + fmt.Sprintf("%d", taskWithDeps.ID) }>
+					@CommentSection(taskWithDeps.ID, orgID, projectID, comments, currentUser)
+				</div>
 			</div>
 		</div>
 	</div>
-</div>
-@detailPaneScript()
+	@detailPaneScript()
 }
 
 // DependencySection renders the dependencies section (for htmx swaps).
@@ -688,12 +689,12 @@ templ TitleField(taskWithDeps model.TaskWithDependencies, orgID int64, isEditing
 				required
 			/>
 			<div class="flex gap-2 mt-2">
-				<button type="submit" class="px-3 py-1.5 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700">
+				<button type="submit" class="px-3 py-1.5 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 cursor-pointer">
 					Save
 				</button>
 				<button
 					type="button"
-					class="px-3 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+					class="px-3 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 cursor-pointer"
 					hx-get={ taskURLPrefix(orgID, taskWithDeps.ProjectID) + "/" + fmt.Sprintf("%d", taskWithDeps.ID) + "/field?field=title" }
 					hx-target={ "#title-section-" + fmt.Sprintf("%d", taskWithDeps.ID) }
 					hx-swap="outerHTML"
@@ -715,7 +716,7 @@ templ TitleField(taskWithDeps model.TaskWithDependencies, orgID int64, isEditing
 				</p>
 				<button
 					type="button"
-					class="edit-btn opacity-0 group-hover:opacity-100 transition-opacity text-gray-400"
+					class="edit-btn opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 cursor-pointer"
 					hx-get={ taskURLPrefix(orgID, taskWithDeps.ProjectID) + "/" + fmt.Sprintf("%d", taskWithDeps.ID) + "/field?field=title&edit=true" }
 					hx-target={ "#title-section-" + fmt.Sprintf("%d", taskWithDeps.ID) }
 					hx-swap="outerHTML"
@@ -747,12 +748,12 @@ templ DescriptionField(taskWithDeps model.TaskWithDependencies, orgID int64, isE
 				class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 			>{ taskWithDeps.Description }</textarea>
 			<div class="flex gap-2 mt-2">
-				<button type="submit" class="px-3 py-1.5 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700">
+				<button type="submit" class="px-3 py-1.5 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 cursor-pointer">
 					Save
 				</button>
 				<button
 					type="button"
-					class="px-3 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+					class="px-3 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 cursor-pointer"
 					hx-get={ taskURLPrefix(orgID, taskWithDeps.ProjectID) + "/" + fmt.Sprintf("%d", taskWithDeps.ID) + "/field?field=description" }
 					hx-target={ "#description-section-" + fmt.Sprintf("%d", taskWithDeps.ID) }
 					hx-swap="outerHTML"
@@ -778,7 +779,7 @@ templ DescriptionField(taskWithDeps model.TaskWithDependencies, orgID int64, isE
 				</p>
 				<button
 					type="button"
-					class="edit-btn opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 shrink-0"
+					class="edit-btn opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 shrink-0 cursor-pointer"
 					hx-get={ taskURLPrefix(orgID, taskWithDeps.ProjectID) + "/" + fmt.Sprintf("%d", taskWithDeps.ID) + "/field?field=description&edit=true" }
 					hx-target={ "#description-section-" + fmt.Sprintf("%d", taskWithDeps.ID) }
 					hx-swap="outerHTML"
@@ -811,12 +812,12 @@ templ authorField(taskWithDeps model.TaskWithDependencies, orgID int64, isEditin
 				class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
 			/>
 			<div class="flex gap-2 mt-2">
-				<button type="submit" class="px-3 py-1.5 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700">
+				<button type="submit" class="px-3 py-1.5 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 cursor-pointer">
 					Save
 				</button>
 				<button
 					type="button"
-					class="px-3 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+					class="px-3 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 cursor-pointer"
 					hx-get={ taskURLPrefix(orgID, taskWithDeps.ProjectID) + "/" + fmt.Sprintf("%d", taskWithDeps.ID) + "/field?field=author" }
 					hx-target={ "#author-section-" + fmt.Sprintf("%d", taskWithDeps.ID) }
 					hx-swap="outerHTML"
@@ -842,7 +843,7 @@ templ authorField(taskWithDeps model.TaskWithDependencies, orgID int64, isEditin
 				</p>
 				<button
 					type="button"
-					class="edit-btn opacity-0 group-hover:opacity-100 transition-opacity text-gray-400"
+					class="edit-btn opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 cursor-pointer"
 					hx-get={ taskURLPrefix(orgID, taskWithDeps.ProjectID) + "/" + fmt.Sprintf("%d", taskWithDeps.ID) + "/field?field=author&edit=true" }
 					hx-target={ "#author-section-" + fmt.Sprintf("%d", taskWithDeps.ID) }
 					hx-swap="outerHTML"
@@ -859,36 +860,41 @@ templ authorField(taskWithDeps model.TaskWithDependencies, orgID int64, isEditin
 // DueDateField renders the due date field - display mode if !isEditing, form mode if isEditing
 templ DueDateField(taskWithDeps model.TaskWithDependencies, orgID int64, isEditing bool) {
 	if isEditing {
-		<form
-			hx-patch={ taskURLPrefix(orgID, taskWithDeps.ProjectID) + "/" + fmt.Sprintf("%d", taskWithDeps.ID) }
-			hx-target={ "#duedate-section-" + fmt.Sprintf("%d", taskWithDeps.ID) }
-			hx-swap="outerHTML"
-		>
-			<input type="hidden" name="field" value="due_date"/>
-			<input type="hidden" name="title" value={ taskWithDeps.Title }/>
-			<input type="hidden" name="description" value={ taskWithDeps.Description }/>
-			<input type="hidden" name="author" value={ taskWithDeps.Author }/>
-			<input
-				type="date"
-				name="due_date"
-				value={ taskWithDeps.DueDateString() }
-				class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-			/>
-			<div class="flex gap-2 mt-2">
-				<button type="submit" class="px-3 py-1.5 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700">
-					Save
-				</button>
-				<button
-					type="button"
-					class="px-3 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
-					hx-get={ taskURLPrefix(orgID, taskWithDeps.ProjectID) + "/" + fmt.Sprintf("%d", taskWithDeps.ID) + "/field?field=due_date" }
-					hx-target={ "#duedate-section-" + fmt.Sprintf("%d", taskWithDeps.ID) }
-					hx-swap="outerHTML"
-				>
-					Cancel
-				</button>
-			</div>
-		</form>
+		<div>
+			<form
+				hx-patch={ taskURLPrefix(orgID, taskWithDeps.ProjectID) + "/" + fmt.Sprintf("%d", taskWithDeps.ID) }
+				hx-target={ "#duedate-section-" + fmt.Sprintf("%d", taskWithDeps.ID) }
+				hx-swap="outerHTML"
+			>
+				<input type="hidden" name="field" value="due_date"/>
+				<input type="hidden" name="title" value={ taskWithDeps.Title }/>
+				<input type="hidden" name="description" value={ taskWithDeps.Description }/>
+				<input type="hidden" name="author" value={ taskWithDeps.Author }/>
+				<input
+					id="due-date-input"
+					type="date"
+					name="due_date"
+					value={ taskWithDeps.DueDateString() }
+					class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+					style="color-scheme: light;"
+				/>
+				<div class="flex gap-2 mt-2">
+					<button type="submit" class="px-3 py-1.5 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 cursor-pointer">
+						Save
+					</button>
+					<button
+						type="button"
+						class="px-3 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 cursor-pointer"
+						hx-get={ taskURLPrefix(orgID, taskWithDeps.ProjectID) + "/" + fmt.Sprintf("%d", taskWithDeps.ID) + "/field?field=due_date" }
+						hx-target={ "#duedate-section-" + fmt.Sprintf("%d", taskWithDeps.ID) }
+						hx-swap="outerHTML"
+					>
+						Cancel
+					</button>
+				</div>
+			</form>
+			@openDatePicker()
+		</div>
 	} else {
 		<div class="editable-field group">
 			<div class="flex items-center gap-2">
@@ -1034,7 +1040,7 @@ templ MetadataItem(taskID int64, orgID int64, projectID int64, key string, value
 				<div class="flex gap-2">
 					<button
 						type="submit"
-						class="px-3 py-1.5 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700"
+						class="px-3 py-1.5 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 cursor-pointer"
 					>
 						Save
 					</button>
@@ -1053,6 +1059,7 @@ templ MetadataItem(taskID int64, orgID int64, projectID int64, key string, value
 }
 
 // Label dropdown initialization script (for htmx swapped content)
+
 script LabelDropdownScripts(taskID int64) {
 	(function() {
 		var section = document.getElementById('label-section-' + taskID);
@@ -1086,4 +1093,11 @@ script LabelDropdownScripts(taskID int64) {
 			}
 		});
 	})();
+}
+
+script openDatePicker() {
+	var input = document.getElementById('due-date-input');
+	if (input && input.showPicker) {
+		input.showPicker();
+	}
 }
