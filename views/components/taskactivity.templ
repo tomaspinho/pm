@@ -1,96 +1,96 @@
 package components
 
 import (
-	"pm/internal/model"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"pm/internal/model"
 	"time"
 )
 
 // Helper function to format activity message
 templ ActivityMessage(action string, fieldName string, oldValue interface{}, newValue interface{}) {
 	switch action {
-	case "create":
-    <span>Created task</span>
-	case "assign":
-		if val, ok := newValue.(map[string]interface{}); ok {
-			if user, ok := val["user"].(string); ok {
-				<span>Assigned <span class="font-bold">{user}</span></span>
+		case "create":
+			<span>Created task</span>
+		case "assign":
+			if val, ok := newValue.(map[string]interface{}); ok {
+				if user, ok := val["user"].(string); ok {
+					<span>Assigned <span class="font-bold">{ user }</span></span>
+				} else {
+					<span>Assigned user</span>
+				}
 			} else {
 				<span>Assigned user</span>
 			}
-		} else {
-			<span>Assigned user</span>
-		}
-	case "unassign":
-		if val, ok := oldValue.(map[string]interface{}); ok {
-			if user, ok := val["user"].(string); ok {
-				<span>Unassigned <span class="font-bold">{user}</span></span>
+		case "unassign":
+			if val, ok := oldValue.(map[string]interface{}); ok {
+				if user, ok := val["user"].(string); ok {
+					<span>Unassigned <span class="font-bold">{ user }</span></span>
+				} else {
+					<span>Unassigned user</span>
+				}
 			} else {
 				<span>Unassigned user</span>
 			}
-		} else {
-			<span>Unassigned user</span>
-		}
-	case "move":
-		if fieldName == "column_id" {
-			if oldV, ok := oldValue.(string); ok {
-				if newV, ok := newValue.(string); ok {
-					<span>Moved from <span class="font-bold">{oldV}</span> to <span class="font-bold">{newV}</span></span>
+		case "move":
+			if fieldName == "column_id" {
+				if oldV, ok := oldValue.(string); ok {
+					if newV, ok := newValue.(string); ok {
+						<span>Moved from <span class="font-bold">{ oldV }</span> to <span class="font-bold">{ newV }</span></span>
+					} else {
+						<span>Moved task</span>
+					}
 				} else {
 					<span>Moved task</span>
 				}
 			} else {
 				<span>Moved task</span>
 			}
-		} else {
-			<span>Moved task</span>
-		}
-	case "update":
-  if fieldName == "dependency" {
-		if newValue != nil {
-			if valueMap, ok := newValue.(map[string]interface{}); ok {
-				if title, ok := valueMap["title"].(string); ok {
-					if id, ok := valueMap["id"].(string); ok {
-						<span>Added task <span class="font-bold"><a href={id}>{title}</a></span> as a {fieldName}</span>
+		case "update":
+			if fieldName == "dependency" {
+				if newValue != nil {
+					if valueMap, ok := newValue.(map[string]interface{}); ok {
+						if title, ok := valueMap["title"].(string); ok {
+							if id, ok := valueMap["id"].(string); ok {
+								<span>Added task <span class="font-bold"><a href={ id }>{ title }</a></span> as a { fieldName }</span>
+							} else {
+								<span>Updated{ fieldName }</span>
+							}
+						} else {
+							<span>Updated{ fieldName }</span>
+						}
 					} else {
-						<span>Updated{fieldName}</span>
+						<span>Updated{ fieldName }</span>
+					}
+				}
+			} else if oldValue != "" && newValue != nil {
+				if oldV, ok := oldValue.(string); ok {
+					if newV, ok := newValue.(string); ok {
+						<span>Changed{ getFieldDisplay(fieldName) } from <span class="font-bold">{ oldV }</span> to <span class="font-bold">{ newV }</span></span>
+					} else {
+						<span>Updated{ getFieldDisplay(fieldName) }</span>
 					}
 				} else {
-					<span>Updated{fieldName}</span>
+					<span>Updated{ getFieldDisplay(fieldName) }</span>
 				}
-			} else {
-				<span>Updated{fieldName}</span>
-			}
-		}
-  } else if oldValue != "" && newValue != nil {
-			if oldV, ok := oldValue.(string); ok {
+			} else if newValue != nil {
 				if newV, ok := newValue.(string); ok {
-					<span>Changed{getFieldDisplay(fieldName)} from <span class="font-bold">{oldV}</span> to <span class="font-bold">{newV}</span></span>
+					<span>Set{ getFieldDisplay(fieldName) } to <span class="font-bold">{ newV }</span></span>
 				} else {
-					<span>Updated{getFieldDisplay(fieldName)}</span>
+					<span>Updated{ getFieldDisplay(fieldName) }</span>
+				}
+			} else if oldValue != nil {
+				if oldV, ok := oldValue.(string); ok {
+					<span>Removed{ getFieldDisplay(fieldName) } <span class="font-bold">{ oldV }</span></span>
+				} else {
+					<span>Updated{ getFieldDisplay(fieldName) }</span>
 				}
 			} else {
-				<span>Updated{getFieldDisplay(fieldName)}</span>
+				<span>Updated{ getFieldDisplay(fieldName) }</span>
 			}
-		} else if newValue != nil {
-			if newV, ok := newValue.(string); ok {
-				<span>Set{getFieldDisplay(fieldName)} to <span class="font-bold">{newV}</span></span>
-			} else {
-				<span>Updated{getFieldDisplay(fieldName)}</span>
-			}
-		} else if oldValue != nil {
-			if oldV, ok := oldValue.(string); ok {
-				<span>Removed{getFieldDisplay(fieldName)} <span class="font-bold">{oldV}</span></span>
-			} else {
-				<span>Updated{getFieldDisplay(fieldName)}</span>
-			}
-		} else {
-			<span>Updated{getFieldDisplay(fieldName)}</span>
-		}
-	default:
-		<span>{action} task</span>
+		default:
+			<span>{ action } task</span>
 	}
 }
 
@@ -117,9 +117,7 @@ func formatActivityTime(t time.Time) string {
 templ TaskActivityFeed(taskID int64, orgID int64, activity []model.TaskActivityRecord) {
 	if len(activity) == 0 {
 		<p class="text-sm text-gray-400 italic p-4">No activity yet</p>
-		return
 	}
-
 	<div class="activity-feed space-y-4">
 		for _, item := range activity {
 			@ActivityItem(item, taskID, orgID)
