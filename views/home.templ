@@ -105,7 +105,7 @@ templ Column(column model.ProjectColumn, project model.Project, tasks []model.Ta
 			data-column-id={ fmt.Sprintf("%d", column.ID) }
 		>
 		for _, task := range tasks {
-		@components.TaskCard(task, tasksWithLabels[task.ID], project.OrganizationID)
+		@components.TaskCard(task, tasksWithLabels[task.ID], project.OrganizationID, false)
 	}
 		</div>
 		<div id={ fmt.Sprintf("add-form-%d", column.ID) } class="mt-2">
@@ -194,7 +194,7 @@ func intToStr(n int) string {
 
 // NewTaskResponse returns the new task card plus out-of-band updates.
 templ NewTaskResponse(task model.Task, orgID int64, columnID int64, count int) {
-	@components.TaskCard(task, nil, orgID)
+	@components.TaskCard(task, nil, orgID, false)
 	<!-- Out-of-band: update count -->
 	<span id={ fmt.Sprintf("count-%d", columnID) } hx-swap-oob="true" class="text-xs text-gray-400 bg-gray-100 rounded-full px-2 py-0.5">
 		{ intToStr(count) }
@@ -227,20 +227,24 @@ templ MetadataSection(taskID int64, orgID int64, projectID int64, metadata model
 	@components.MetadataSection(taskID, orgID, projectID, metadata)
 }
 
-// TaskFieldUpdateResponse returns OOB updates for individual task fields (no full pane reload).
+// TaskFieldUpdateResponse returns the updated task card with OOB swap for the kanban board.
 templ TaskFieldUpdateResponse(taskWithDeps model.TaskWithDependencies, orgID int64, labels []model.Label) {
-	@components.TitleDisplay(taskWithDeps, orgID)
-	@components.DescriptionDisplay(taskWithDeps, orgID)
-	@components.AuthorDisplay(taskWithDeps, orgID)
-	@components.DueDateDisplay(taskWithDeps, orgID)
-	@components.DueDateForm(taskWithDeps, orgID)
-	<!-- Update the task card on the kanban board -->
-	<div
-		id={ "task-" + fmt.Sprintf("%d", taskWithDeps.ID) }
-		hx-swap-oob="true"
-	>
-		@components.TaskCard(taskWithDeps.Task, labels, orgID)
-	</div>
+	@components.TaskCard(taskWithDeps.Task, labels, orgID, true)
+}
+
+// TaskFieldSectionUpdate returns the field section and task card OOB update.
+templ TaskFieldSectionUpdate(taskWithDeps model.TaskWithDependencies, orgID int64, labels []model.Label, field string) {
+	switch field {
+	case "title":
+		@components.TitleSection(taskWithDeps, orgID, false)
+	case "description":
+		@components.DescriptionSection(taskWithDeps, orgID, false)
+	case "author":
+		@components.AuthorSection(taskWithDeps, orgID, false)
+	case "due_date":
+		@components.DueDateSection(taskWithDeps, orgID, false)
+	}
+	@components.TaskCard(taskWithDeps.Task, labels, orgID, true)
 }
 
 // ColumnUpdateResponse returns OOB updates for column badge and kanban columns (no full pane reload).
@@ -256,7 +260,7 @@ templ ColumnUpdateResponse(taskWithDeps model.TaskWithDependencies, orgID int64,
 			hx-swap-oob="true"
 		>
 			for _, task := range tasksByColumn[oldColumnID] {
-				@components.TaskCard(task, tasksWithLabels[task.ID], orgID)
+				@components.TaskCard(task, tasksWithLabels[task.ID], orgID, false)
 			}
 		</div>
 		<!-- Out-of-band: update old column count -->
@@ -276,7 +280,7 @@ templ ColumnUpdateResponse(taskWithDeps model.TaskWithDependencies, orgID int64,
 		hx-swap-oob="true"
 	>
 		for _, task := range tasksByColumn[taskWithDeps.ColumnID] {
-			@components.TaskCard(task, tasksWithLabels[task.ID], orgID)
+			@components.TaskCard(task, tasksWithLabels[task.ID], orgID, false)
 		}
 	</div>
 	<!-- Out-of-band: update new column count -->

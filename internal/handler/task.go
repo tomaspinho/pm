@@ -262,6 +262,41 @@ func (h *Handler) HandleTaskDetail(c fiber.Ctx) error {
 	return render(c, views.TaskDetailPane(*taskWithDeps, orgID, projectID, commentTree, user, activity, labels, allLabels))
 }
 
+// HandleGetTaskField returns a single field section for inline editing.
+// GET /orgs/:org_id/projects/:project_id/tasks/:id/field
+func (h *Handler) HandleGetTaskField(c fiber.Ctx) error {
+	orgID, _, err := parseOrgAndProject(c)
+	if err != nil {
+		return err
+	}
+
+	taskID, err := strconv.ParseInt(c.Params("id"), 10, 64)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "invalid task id")
+	}
+
+	taskWithDeps, err := h.store.GetTaskWithDependencies(c.Context(), taskID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusNotFound, "task not found")
+	}
+
+	field := c.Query("field")
+	edit := c.Query("edit") == "true"
+
+	switch field {
+	case "title":
+		return render(c, components.TitleSection(*taskWithDeps, orgID, edit))
+	case "description":
+		return render(c, components.DescriptionSection(*taskWithDeps, orgID, edit))
+	case "author":
+		return render(c, components.AuthorSection(*taskWithDeps, orgID, edit))
+	case "due_date":
+		return render(c, components.DueDateSection(*taskWithDeps, orgID, edit))
+	default:
+		return fiber.NewError(fiber.StatusBadRequest, "invalid field")
+	}
+}
+
 // HandleUpdateTask updates a task's basic fields.
 // PATCH /orgs/:org_id/projects/:project_id/tasks/:id
 func (h *Handler) HandleUpdateTask(c fiber.Ctx) error {
@@ -284,9 +319,27 @@ func (h *Handler) HandleUpdateTask(c fiber.Ctx) error {
 	title := c.FormValue("title")
 	description := c.FormValue("description")
 	author := c.FormValue("author")
+	field := c.FormValue("field")
 
-	if title == "" {
-		return fiber.NewError(fiber.StatusBadRequest, "title is required")
+	// If field-specific update, use the hidden fields for unchanged fields
+	if field != "" {
+		switch field {
+		case "title":
+			if title == "" {
+				return fiber.NewError(fiber.StatusBadRequest, "title is required")
+			}
+		case "description":
+			// description can be empty
+		case "author":
+			// author can be empty
+		case "due_date":
+			// handled below
+		}
+	} else {
+		// Full update - title is required
+		if title == "" {
+			return fiber.NewError(fiber.StatusBadRequest, "title is required")
+		}
 	}
 
 	dueDate, err := parseDueDate(c.FormValue("due_date"))
@@ -311,8 +364,12 @@ func (h *Handler) HandleUpdateTask(c fiber.Ctx) error {
 		if currentTask.Author != author {
 			_ = h.store.CreateActivity(c.Context(), taskID, user.ID, "update", "author", currentTask.Author, author)
 		}
-		if currentTask.DueDateString() != dueDate.Format("2006-01-02") {
-			_ = h.store.CreateActivity(c.Context(), taskID, user.ID, "update", "due_date", currentTask.DueDateString(), dueDate.Format("2006-01-02"))
+		var dueDateStr string
+		if dueDate != nil {
+			dueDateStr = dueDate.Format("2006-01-02")
+		}
+		if currentTask.DueDateString() != dueDateStr {
+			_ = h.store.CreateActivity(c.Context(), taskID, user.ID, "update", "due_date", currentTask.DueDateString(), dueDateStr)
 		}
 	}
 
@@ -321,10 +378,16 @@ func (h *Handler) HandleUpdateTask(c fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to reload task")
 	}
 
-	// Load task labels
+	// Load task labels for kanban card
 	taskLabels, err := h.store.GetTaskLabels(c.Context(), taskID)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to load labels")
+	}
+
+	// If field-specific update, return just that field section
+	if field != "" {
+		// Return field section + task card OOB for kanban update
+		return render(c, views.TaskFieldSectionUpdate(*taskWithDeps, orgID, taskLabels, field))
 	}
 
 	return render(c, views.TaskFieldUpdateResponse(*taskWithDeps, orgID, taskLabels))
