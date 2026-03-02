@@ -678,9 +678,6 @@ templ TitleField(taskWithDeps model.TaskWithDependencies, orgID int64, isEditing
 			hx-swap="outerHTML"
 		>
 			<input type="hidden" name="field" value="title"/>
-			<input type="hidden" name="description" value={ taskWithDeps.Description }/>
-			<input type="hidden" name="author" value={ taskWithDeps.Author }/>
-			<input type="hidden" name="due_date" value={ taskWithDeps.DueDateString() }/>
 			<input
 				type="text"
 				name="title"
@@ -739,9 +736,6 @@ templ DescriptionField(taskWithDeps model.TaskWithDependencies, orgID int64, isE
 			hx-swap="outerHTML"
 		>
 			<input type="hidden" name="field" value="description"/>
-			<input type="hidden" name="title" value={ taskWithDeps.Title }/>
-			<input type="hidden" name="author" value={ taskWithDeps.Author }/>
-			<input type="hidden" name="due_date" value={ taskWithDeps.DueDateString() }/>
 			<textarea
 				name="description"
 				rows="4"
@@ -802,9 +796,6 @@ templ authorField(taskWithDeps model.TaskWithDependencies, orgID int64, isEditin
 			hx-swap="outerHTML"
 		>
 			<input type="hidden" name="field" value="author"/>
-			<input type="hidden" name="title" value={ taskWithDeps.Title }/>
-			<input type="hidden" name="description" value={ taskWithDeps.Description }/>
-			<input type="hidden" name="due_date" value={ taskWithDeps.DueDateString() }/>
 			<input
 				type="text"
 				name="author"
@@ -867,9 +858,6 @@ templ DueDateField(taskWithDeps model.TaskWithDependencies, orgID int64, isEditi
 				hx-swap="outerHTML"
 			>
 				<input type="hidden" name="field" value="due_date"/>
-				<input type="hidden" name="title" value={ taskWithDeps.Title }/>
-				<input type="hidden" name="description" value={ taskWithDeps.Description }/>
-				<input type="hidden" name="author" value={ taskWithDeps.Author }/>
 				<input
 					id="due-date-input"
 					type="date"

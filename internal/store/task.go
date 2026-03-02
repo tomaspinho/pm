@@ -205,6 +205,28 @@ func (s *Store) UpdateTask(ctx context.Context, taskID int64, title, description
 	return nil
 }
 
+// UpdateTaskField updates a single field of a task.
+func (s *Store) UpdateTaskField(ctx context.Context, taskID int64, field string, value any) error {
+	var query string
+	switch field {
+	case "title":
+		query = `UPDATE tasks SET title = $1, updated_at = NOW() WHERE id = $2 AND deleted_at IS NULL`
+	case "description":
+		query = `UPDATE tasks SET description = $1, updated_at = NOW() WHERE id = $2 AND deleted_at IS NULL`
+	case "author":
+		query = `UPDATE tasks SET author = $1, updated_at = NOW() WHERE id = $2 AND deleted_at IS NULL`
+	case "due_date":
+		query = `UPDATE tasks SET due_date = $1, updated_at = NOW() WHERE id = $2 AND deleted_at IS NULL`
+	default:
+		return fmt.Errorf("unknown field: %s", field)
+	}
+	_, err := s.db.ExecContext(ctx, query, value, taskID)
+	if err != nil {
+		return fmt.Errorf("updating task %d field %s: %w", taskID, field, err)
+	}
+	return nil
+}
+
 // UpdateTaskMetadata updates the entire metadata JSON for a task.
 func (s *Store) UpdateTaskMetadata(ctx context.Context, taskID int64, metadata model.TaskMetadata) error {
 	query := `

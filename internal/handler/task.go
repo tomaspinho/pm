@@ -310,36 +310,18 @@ func (h *Handler) HandleUpdateTask(c fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "invalid task id")
 	}
 
-	// Get current task data for comparison
-	currentTask, err := h.store.GetTask(c.Context(), taskID)
-	if err != nil {
-		return fiber.NewError(fiber.StatusNotFound, "task not found")
+	field := c.FormValue("field")
+
+	if field != "" {
+		return h.handleFieldUpdate(c, orgID, taskID, field)
 	}
 
 	title := c.FormValue("title")
 	description := c.FormValue("description")
 	author := c.FormValue("author")
-	field := c.FormValue("field")
 
-	// If field-specific update, use the hidden fields for unchanged fields
-	if field != "" {
-		switch field {
-		case "title":
-			if title == "" {
-				return fiber.NewError(fiber.StatusBadRequest, "title is required")
-			}
-		case "description":
-			// description can be empty
-		case "author":
-			// author can be empty
-		case "due_date":
-			// handled below
-		}
-	} else {
-		// Full update - title is required
-		if title == "" {
-			return fiber.NewError(fiber.StatusBadRequest, "title is required")
-		}
+	if title == "" {
+		return fiber.NewError(fiber.StatusBadRequest, "title is required")
 	}
 
 	dueDate, err := parseDueDate(c.FormValue("due_date"))
@@ -347,30 +329,76 @@ func (h *Handler) HandleUpdateTask(c fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
 
+	currentTask, err := h.store.GetTask(c.Context(), taskID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusNotFound, "task not found")
+	}
+
 	err = h.store.UpdateTask(c.Context(), taskID, title, description, author, dueDate)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to update task")
 	}
 
-	// Create activity records for field changes
-	user, err := middleware.GetCurrentUser(c)
-	if err == nil {
-		if currentTask.Title != title {
-			_ = h.store.CreateActivity(c.Context(), taskID, user.ID, "update", "title", currentTask.Title, title)
+	h.logFieldChanges(c, currentTask, title, description, author, dueDate)
+
+	taskWithDeps, err := h.store.GetTaskWithDependencies(c.Context(), taskID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to reload task")
+	}
+
+	taskLabels, err := h.store.GetTaskLabels(c.Context(), taskID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to load labels")
+	}
+
+	return render(c, views.TaskFieldUpdateResponse(*taskWithDeps, orgID, taskLabels))
+}
+
+func (h *Handler) handleFieldUpdate(c fiber.Ctx, orgID, taskID int64, field string) error {
+	currentTask, err := h.store.GetTask(c.Context(), taskID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusNotFound, "task not found")
+	}
+
+	var oldValue, newValue string
+
+	switch field {
+	case "title":
+		newValue = c.FormValue("title")
+		if newValue == "" {
+			return fiber.NewError(fiber.StatusBadRequest, "title is required")
 		}
-		if currentTask.Description != description {
-			_ = h.store.CreateActivity(c.Context(), taskID, user.ID, "update", "description", currentTask.Description, description)
+		oldValue = currentTask.Title
+		err = h.store.UpdateTaskField(c.Context(), taskID, "title", newValue)
+	case "description":
+		newValue = c.FormValue("description")
+		oldValue = currentTask.Description
+		err = h.store.UpdateTaskField(c.Context(), taskID, "description", newValue)
+	case "author":
+		newValue = c.FormValue("author")
+		oldValue = currentTask.Author
+		err = h.store.UpdateTaskField(c.Context(), taskID, "author", newValue)
+	case "due_date":
+		dueDate, parseErr := parseDueDate(c.FormValue("due_date"))
+		if parseErr != nil {
+			return fiber.NewError(fiber.StatusBadRequest, parseErr.Error())
 		}
-		if currentTask.Author != author {
-			_ = h.store.CreateActivity(c.Context(), taskID, user.ID, "update", "author", currentTask.Author, author)
-		}
-		var dueDateStr string
+		oldValue = currentTask.DueDateString()
 		if dueDate != nil {
-			dueDateStr = dueDate.Format("2006-01-02")
+			newValue = dueDate.Format("2006-01-02")
 		}
-		if currentTask.DueDateString() != dueDateStr {
-			_ = h.store.CreateActivity(c.Context(), taskID, user.ID, "update", "due_date", currentTask.DueDateString(), dueDateStr)
-		}
+		err = h.store.UpdateTaskField(c.Context(), taskID, "due_date", dueDate)
+	default:
+		return fiber.NewError(fiber.StatusBadRequest, "invalid field")
+	}
+
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to update task")
+	}
+
+	user, userErr := middleware.GetCurrentUser(c)
+	if userErr == nil && oldValue != newValue {
+		_ = h.store.CreateActivity(c.Context(), taskID, user.ID, "update", field, oldValue, newValue)
 	}
 
 	taskWithDeps, err := h.store.GetTaskWithDependencies(c.Context(), taskID)
@@ -378,19 +406,35 @@ func (h *Handler) HandleUpdateTask(c fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to reload task")
 	}
 
-	// Load task labels for kanban card
 	taskLabels, err := h.store.GetTaskLabels(c.Context(), taskID)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to load labels")
 	}
 
-	// If field-specific update, return just that field section
-	if field != "" {
-		// Return field section + task card OOB for kanban update
-		return render(c, views.TaskFieldSectionUpdate(*taskWithDeps, orgID, taskLabels, field))
-	}
+	return render(c, views.TaskFieldSectionUpdate(*taskWithDeps, orgID, taskLabels, field))
+}
 
-	return render(c, views.TaskFieldUpdateResponse(*taskWithDeps, orgID, taskLabels))
+func (h *Handler) logFieldChanges(c fiber.Ctx, currentTask *model.Task, title, description, author string, dueDate *time.Time) {
+	user, err := middleware.GetCurrentUser(c)
+	if err != nil {
+		return
+	}
+	if currentTask.Title != title {
+		_ = h.store.CreateActivity(c.Context(), currentTask.ID, user.ID, "update", "title", currentTask.Title, title)
+	}
+	if currentTask.Description != description {
+		_ = h.store.CreateActivity(c.Context(), currentTask.ID, user.ID, "update", "description", currentTask.Description, description)
+	}
+	if currentTask.Author != author {
+		_ = h.store.CreateActivity(c.Context(), currentTask.ID, user.ID, "update", "author", currentTask.Author, author)
+	}
+	var dueDateStr string
+	if dueDate != nil {
+		dueDateStr = dueDate.Format("2006-01-02")
+	}
+	if currentTask.DueDateString() != dueDateStr {
+		_ = h.store.CreateActivity(c.Context(), currentTask.ID, user.ID, "update", "due_date", currentTask.DueDateString(), dueDateStr)
+	}
 }
 
 // HandleAddDependency adds a dependency to a task.
