@@ -8,7 +8,7 @@ import (
 	"pm/views/components"
 )
 
-templ BoardPage(project model.Project, columns []model.ProjectColumn, tasksByColumn map[int64][]model.Task, labels []model.Label, tasksWithLabels map[int64][]model.Label, nav NavContext) {
+templ BoardPage(project model.Project, columns []model.ProjectColumn, tasksByColumn map[int64][]model.Task, labels []model.Label, tasksWithLabels map[int64][]model.Label, tasksWithAssignees map[int64][]model.AssigneeInfo, nav NavContext) {
 	@BoardLayout(project.Name, nav) {
 		<!-- Project Header - Left Aligned with Settings Button -->
 		<div class="flex-shrink-0 py-6">
@@ -48,7 +48,7 @@ templ BoardPage(project model.Project, columns []model.ProjectColumn, tasksByCol
 						style={ templ.SafeCSS(fmt.Sprintf("grid-template-columns: repeat(%d, 320px)", len(columns))) }
 					>
 						for _, column := range columns {
-							@Column(column, project, tasksByColumn[column.ID], tasksWithLabels)
+							@Column(column, project, tasksByColumn[column.ID], tasksWithLabels, tasksWithAssignees)
 						}
 					</div>
 				</div>
@@ -82,7 +82,7 @@ templ EmptyColumnsState(project model.Project, orgID int64) {
 	</div>
 }
 
-templ Column(column model.ProjectColumn, project model.Project, tasks []model.Task, tasksWithLabels map[int64][]model.Label) {
+templ Column(column model.ProjectColumn, project model.Project, tasks []model.Task, tasksWithLabels map[int64][]model.Label, tasksWithAssignees map[int64][]model.AssigneeInfo) {
 	<div class="flex flex-col min-w-0">
 		<div class="flex items-center gap-2 mb-3">
 			<div
@@ -105,7 +105,7 @@ templ Column(column model.ProjectColumn, project model.Project, tasks []model.Ta
 			data-column-id={ fmt.Sprintf("%d", column.ID) }
 		>
 		for _, task := range tasks {
-		@components.TaskCard(task, tasksWithLabels[task.ID], project.OrganizationID, false)
+		@components.TaskCard(task, tasksWithLabels[task.ID], tasksWithAssignees[task.ID], project.OrganizationID, false)
 	}
 		</div>
 		<div id={ fmt.Sprintf("add-form-%d", column.ID) } class="mt-2">
@@ -194,7 +194,7 @@ func intToStr(n int) string {
 
 // NewTaskResponse returns the new task card plus out-of-band updates.
 templ NewTaskResponse(task model.Task, orgID int64, columnID int64, count int) {
-	@components.TaskCard(task, nil, orgID, false)
+	@components.TaskCard(task, nil, nil, orgID, false)
 	<!-- Out-of-band: update count -->
 	<span id={ fmt.Sprintf("count-%d", columnID) } hx-swap-oob="true" class="text-xs text-gray-400 bg-gray-100 rounded-full px-2 py-0.5">
 		{ intToStr(count) }
@@ -228,12 +228,12 @@ templ MetadataSection(taskID int64, orgID int64, projectID int64, metadata model
 }
 
 // TaskFieldUpdateResponse returns the updated task card with OOB swap for the kanban board.
-templ TaskFieldUpdateResponse(taskWithDeps model.TaskWithDependencies, orgID int64, labels []model.Label) {
-	@components.TaskCard(taskWithDeps.Task, labels, orgID, true)
+templ TaskFieldUpdateResponse(taskWithDeps model.TaskWithDependencies, orgID int64, labels []model.Label, assignees []model.AssigneeInfo) {
+	@components.TaskCard(taskWithDeps.Task, labels, assignees, orgID, true)
 }
 
 // TaskFieldSectionUpdate returns the field section and task card OOB update.
-templ TaskFieldSectionUpdate(taskWithDeps model.TaskWithDependencies, orgID int64, labels []model.Label, field string) {
+templ TaskFieldSectionUpdate(taskWithDeps model.TaskWithDependencies, orgID int64, labels []model.Label, assignees []model.AssigneeInfo, field string) {
 	switch field {
 	case "title":
 		@components.TitleSection(taskWithDeps, orgID, false)
@@ -244,11 +244,11 @@ templ TaskFieldSectionUpdate(taskWithDeps model.TaskWithDependencies, orgID int6
 	case "due_date":
 		@components.DueDateSection(taskWithDeps, orgID, false)
 	}
-	@components.TaskCard(taskWithDeps.Task, labels, orgID, true)
+	@components.TaskCard(taskWithDeps.Task, labels, assignees, orgID, true)
 }
 
 // ColumnUpdateResponse returns OOB updates for column badge and kanban columns (no full pane reload).
-templ ColumnUpdateResponse(taskWithDeps model.TaskWithDependencies, orgID int64, oldColumnID int64, tasksByColumn map[int64][]model.Task, tasksWithLabels map[int64][]model.Label, columns []model.ProjectColumn) {
+templ ColumnUpdateResponse(taskWithDeps model.TaskWithDependencies, orgID int64, oldColumnID int64, tasksByColumn map[int64][]model.Task, tasksWithLabels map[int64][]model.Label, tasksWithAssignees map[int64][]model.AssigneeInfo, columns []model.ProjectColumn) {
 	<!-- Update column badge -->
 	@components.ColumnBadge(taskWithDeps, orgID, columns)
 	if oldColumnID != taskWithDeps.ColumnID {
@@ -260,7 +260,7 @@ templ ColumnUpdateResponse(taskWithDeps model.TaskWithDependencies, orgID int64,
 			hx-swap-oob="true"
 		>
 			for _, task := range tasksByColumn[oldColumnID] {
-				@components.TaskCard(task, tasksWithLabels[task.ID], orgID, false)
+				@components.TaskCard(task, tasksWithLabels[task.ID], tasksWithAssignees[task.ID], orgID, false)
 			}
 		</div>
 		<!-- Out-of-band: update old column count -->
@@ -280,7 +280,7 @@ templ ColumnUpdateResponse(taskWithDeps model.TaskWithDependencies, orgID int64,
 		hx-swap-oob="true"
 	>
 		for _, task := range tasksByColumn[taskWithDeps.ColumnID] {
-			@components.TaskCard(task, tasksWithLabels[task.ID], orgID, false)
+			@components.TaskCard(task, tasksWithLabels[task.ID], tasksWithAssignees[task.ID], orgID, false)
 		}
 	</div>
 	<!-- Out-of-band: update new column count -->
@@ -294,7 +294,7 @@ templ ColumnUpdateResponse(taskWithDeps model.TaskWithDependencies, orgID int64,
 }
 
 // BoardPageWithTask renders the board with a task's detail pane pre-opened.
-templ BoardPageWithTask(project model.Project, columns []model.ProjectColumn, tasksByColumn map[int64][]model.Task, tasksWithLabels map[int64][]model.Label, allLabels []model.Label, nav NavContext, taskWithDeps *model.TaskWithDependencies, comments []model.CommentThread, user *model.User, taskLabels []model.Label, activity []model.TaskActivityRecord) {
+templ BoardPageWithTask(project model.Project, columns []model.ProjectColumn, tasksByColumn map[int64][]model.Task, tasksWithLabels map[int64][]model.Label, tasksWithAssignees map[int64][]model.AssigneeInfo, allLabels []model.Label, nav NavContext, taskWithDeps *model.TaskWithDependencies, comments []model.CommentThread, user *model.User, taskLabels []model.Label, activity []model.TaskActivityRecord) {
 	@BoardLayout(project.Name, nav) {
 		<div class="flex-shrink-0 py-6">
 			<div class="max-w-7xl mx-auto px-4 flex items-start justify-between">
@@ -331,7 +331,7 @@ templ BoardPageWithTask(project model.Project, columns []model.ProjectColumn, ta
 						style={ templ.SafeCSS(fmt.Sprintf("grid-template-columns: repeat(%d, 320px)", len(columns))) }
 					>
 						for _, column := range columns {
-							@Column(column, project, tasksByColumn[column.ID], tasksWithLabels)
+							@Column(column, project, tasksByColumn[column.ID], tasksWithLabels, tasksWithAssignees)
 						}
 					</div>
 				</div>

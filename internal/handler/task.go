@@ -351,7 +351,12 @@ func (h *Handler) HandleUpdateTask(c fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to load labels")
 	}
 
-	return render(c, views.TaskFieldUpdateResponse(*taskWithDeps, orgID, taskLabels))
+	taskAssignees, err := h.store.GetTaskAssignees(c.Context(), taskID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to load assignees")
+	}
+
+	return render(c, views.TaskFieldUpdateResponse(*taskWithDeps, orgID, taskLabels, taskAssignees))
 }
 
 func (h *Handler) handleFieldUpdate(c fiber.Ctx, orgID, taskID int64, field string) error {
@@ -411,7 +416,12 @@ func (h *Handler) handleFieldUpdate(c fiber.Ctx, orgID, taskID int64, field stri
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to load labels")
 	}
 
-	return render(c, views.TaskFieldSectionUpdate(*taskWithDeps, orgID, taskLabels, field))
+	taskAssignees, err := h.store.GetTaskAssignees(c.Context(), taskID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to load assignees")
+	}
+
+	return render(c, views.TaskFieldSectionUpdate(*taskWithDeps, orgID, taskLabels, taskAssignees, field))
 }
 
 func (h *Handler) logFieldChanges(c fiber.Ctx, currentTask *model.Task, title, description, author string, dueDate *time.Time) {
@@ -1091,7 +1101,16 @@ func (h *Handler) HandleUpdateColumn(c fiber.Ctx) error {
 		}
 	}
 
-	return render(c, views.ColumnUpdateResponse(*taskWithDeps, orgID, oldColumnID, tasksByColumn, tasksWithLabels, columns))
+	// Load assignees for each task
+	tasksWithAssignees := make(map[int64][]model.AssigneeInfo)
+	for _, task := range tasks {
+		assignees, err := h.store.GetTaskAssignees(c.Context(), task.ID)
+		if err == nil {
+			tasksWithAssignees[task.ID] = assignees
+		}
+	}
+
+	return render(c, views.ColumnUpdateResponse(*taskWithDeps, orgID, oldColumnID, tasksByColumn, tasksWithLabels, tasksWithAssignees, columns))
 }
 
 // HandleTaskWithId renders the board page with a task's detail pane pre-opened if requested via URL.
@@ -1147,6 +1166,15 @@ func (h *Handler) HandleTaskWithId(c fiber.Ctx) error {
 		}
 	}
 
+	// Load assignees for each task
+	tasksWithAssignees := make(map[int64][]model.AssigneeInfo)
+	for _, task := range tasks {
+		assignees, err := h.store.GetTaskAssignees(c.Context(), task.ID)
+		if err == nil {
+			tasksWithAssignees[task.ID] = assignees
+		}
+	}
+
 	// Load all project labels for dropdown
 	allLabels, err := h.store.GetProjectLabels(c.Context(), projectID)
 	if err != nil {
@@ -1188,5 +1216,5 @@ func (h *Handler) HandleTaskWithId(c fiber.Ctx) error {
 	_ = h.store.UpdateLastViewedProject(c.Context(), user.ID, project.ID)
 
 	// Render board - the script will open the detail pane via htmx if task ID in URL
-	return render(c, views.BoardPageWithTask(project, columns, tasksByColumn, tasksWithLabels, allLabels, nav, taskWithDeps, commentTree, user, taskLabels, activity))
+	return render(c, views.BoardPageWithTask(project, columns, tasksByColumn, tasksWithLabels, tasksWithAssignees, allLabels, nav, taskWithDeps, commentTree, user, taskLabels, activity))
 }

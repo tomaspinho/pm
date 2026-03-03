@@ -63,6 +63,15 @@ func (h *Handler) HandleBoard(c fiber.Ctx) error {
 		}
 	}
 
+	// Load assignees for each task
+	tasksWithAssignees := make(map[int64][]model.AssigneeInfo)
+	for _, task := range tasks {
+		assignees, err := h.store.GetTaskAssignees(ctx, task.ID)
+		if err == nil {
+			tasksWithAssignees[task.ID] = assignees
+		}
+	}
+
 	// Build nav context.
 	user, err := middleware.GetCurrentUser(c)
 	if err != nil {
@@ -84,5 +93,5 @@ func (h *Handler) HandleBoard(c fiber.Ctx) error {
 	// Track last viewed project.
 	_ = h.store.UpdateLastViewedProject(ctx, user.ID, project.ID)
 
-	return render(c, views.BoardPage(project, columns, grouped, labels, tasksWithLabels, nav))
+	return render(c, views.BoardPage(project, columns, grouped, labels, tasksWithLabels, tasksWithAssignees, nav))
 }

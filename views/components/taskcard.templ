@@ -16,7 +16,7 @@ func dueDateBadgeClass(task model.Task) string {
 	return "bg-gray-100 text-gray-600 border-gray-300"
 }
 
-templ TaskCard(task model.Task, labels []model.Label, orgID int64, oobSwap bool) {
+templ TaskCard(task model.Task, labels []model.Label, assignees []model.AssigneeInfo, orgID int64, oobSwap bool) {
 	<div
 		class="task-card drag-handle cursor-pointer bg-white rounded-lg shadow-sm border border-gray-200 p-3 cursor-grab active:cursor-grabbing hover:shadow-md transition-all duration-150"
 		data-id={ fmt.Sprintf("%d", task.ID) }
@@ -52,6 +52,13 @@ templ TaskCard(task model.Task, labels []model.Label, orgID int64, oobSwap bool)
 					<div class="flex flex-wrap gap-1 mt-2" id={ "task-labels-" + fmt.Sprintf("%d", task.ID) }>
 						for _, label := range labels {
 							@LabelChip(label, false, orgID, task.ProjectID, task.ID)
+						}
+					</div>
+				}
+				if len(assignees) > 0 {
+					<div class="flex flex-wrap gap-1 mt-2">
+						for _, assignee := range assignees {
+							@AssigneeBadgeSmall(assignee)
 						}
 					</div>
 				}
