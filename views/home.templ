@@ -101,12 +101,12 @@ templ Column(column model.ProjectColumn, project model.Project, tasks []model.Ta
 		</div>
 		<div
 			id={ fmt.Sprintf("task-list-%d", column.ID) }
-			class="sortable-column flex flex-col gap-2 min-h-[120px] p-2 rounded-lg bg-gray-100/50 border border-transparent transition-all duration-200"
+			class="sortable-column flex flex-col gap-2 min-h-[120px] rounded-lg bg-gray-100/50 border border-transparent transition-all duration-200"
 			data-column-id={ fmt.Sprintf("%d", column.ID) }
 		>
-		for _, task := range tasks {
-		@components.TaskCard(task, tasksWithLabels[task.ID], tasksWithAssignees[task.ID], project.OrganizationID, false)
-	}
+			for _, task := range tasks {
+				@components.TaskCard(task, tasksWithLabels[task.ID], tasksWithAssignees[task.ID], project.OrganizationID, false)
+			}
 		</div>
 		<div id={ fmt.Sprintf("add-form-%d", column.ID) } class="mt-2">
 			@components.AddTaskButton(column.ID, project.OrganizationID, project.ID)
@@ -235,14 +235,14 @@ templ TaskFieldUpdateResponse(taskWithDeps model.TaskWithDependencies, orgID int
 // TaskFieldSectionUpdate returns the field section and task card OOB update.
 templ TaskFieldSectionUpdate(taskWithDeps model.TaskWithDependencies, orgID int64, labels []model.Label, assignees []model.AssigneeInfo, field string) {
 	switch field {
-	case "title":
-		@components.TitleSection(taskWithDeps, orgID, false)
-	case "description":
-		@components.DescriptionSection(taskWithDeps, orgID, false)
-	case "author":
-		@components.AuthorSection(taskWithDeps, orgID, false)
-	case "due_date":
-		@components.DueDateSection(taskWithDeps, orgID, false)
+		case "title":
+			@components.TitleSection(taskWithDeps, orgID, false)
+		case "description":
+			@components.DescriptionSection(taskWithDeps, orgID, false)
+		case "author":
+			@components.AuthorSection(taskWithDeps, orgID, false)
+		case "due_date":
+			@components.DueDateSection(taskWithDeps, orgID, false)
 	}
 	@components.TaskCard(taskWithDeps.Task, labels, assignees, orgID, true)
 }
@@ -343,7 +343,6 @@ templ BoardPageWithTask(project model.Project, columns []model.ProjectColumn, ta
 	}
 }
 
-
 templ LabelUpdateResponse(taskID int64, labels []model.Label, orgID int64, projectID int64) {
 	<div id={ "task-labels-" + fmt.Sprintf("%d", taskID) } hx-swap-oob="true">
 		for _, label := range labels {
@@ -351,4 +350,3 @@ templ LabelUpdateResponse(taskID int64, labels []model.Label, orgID int64, proje
 		}
 	</div>
 }
-
