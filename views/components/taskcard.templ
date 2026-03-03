@@ -1,8 +1,10 @@
 package components
 
 import (
-	"pm/internal/model"
 	"fmt"
+	"strings"
+
+	"pm/internal/model"
 )
 
 // Helper function to get due date badge class
@@ -16,9 +18,18 @@ func dueDateBadgeClass(task model.Task) string {
 	return "bg-gray-100 text-gray-600 border-gray-300"
 }
 
+// assigneeNames extracts display names from assignees for tooltip
+func assigneeNames(assignees []model.AssigneeInfo) string {
+	names := make([]string, len(assignees))
+	for i, a := range assignees {
+		names[i] = a.DisplayName
+	}
+	return strings.Join(names, ", ")
+}
+
 templ TaskCard(task model.Task, labels []model.Label, assignees []model.AssigneeInfo, orgID int64, oobSwap bool) {
 	<div
-		class="task-card drag-handle cursor-pointer bg-white rounded-lg shadow-sm border border-gray-200 p-3 cursor-grab active:cursor-grabbing hover:shadow-md transition-all duration-150"
+		class="task-card drag-handle cursor-pointer bg-white rounded-lg shadow-sm border border-gray-200 pt-3 px-3 pb-3 cursor-grab active:cursor-grabbing hover:shadow-md transition-all duration-150 relative"
 		data-id={ fmt.Sprintf("%d", task.ID) }
 		data-org-id={ fmt.Sprintf("%d", orgID) }
 		data-project-id={ fmt.Sprintf("%d", task.ProjectID) }
@@ -33,32 +44,23 @@ templ TaskCard(task model.Task, labels []model.Label, assignees []model.Assignee
 		hx-on::after-request="history.pushState(null, '', this.dataset.url)"
 	>
 		<div class="flex items-start gap-2">
-			<div
-				class="flex-1 min-w-0 cursor-pointer task-card-content"
-			>
+			<div class="flex-1 min-w-0 cursor-pointer task-card-content">
 				<p class="text-sm font-medium text-gray-900 truncate">{ task.Title }</p>
-				if task.DueDate != nil {
-					<div class={ "text-xs px-2 py-0.5 rounded-full border inline-flex items-center gap-1 mt-1", dueDateBadgeClass(task) }>
-						<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-						</svg>
-						<span>{ task.DueDate.Format("Jan 2") }</span>
-					</div>
-				}
 				if task.Description != "" {
 					<p class="text-xs text-gray-500 mt-1 line-clamp-2">{ task.Description }</p>
 				}
-				if len(labels) > 0 {
+				if len(labels) > 0 || task.DueDate != nil {
 					<div class="flex flex-wrap gap-1 mt-2" id={ "task-labels-" + fmt.Sprintf("%d", task.ID) }>
 						for _, label := range labels {
 							@LabelChip(label, false, orgID, task.ProjectID, task.ID)
 						}
-					</div>
-				}
-				if len(assignees) > 0 {
-					<div class="flex flex-wrap gap-1 mt-2">
-						for _, assignee := range assignees {
-							@AssigneeBadgeSmall(assignee)
+						if task.DueDate != nil {
+							<div class={ "text-xs px-2 py-0.5 rounded-full border inline-flex items-center gap-1", dueDateBadgeClass(task) }>
+								<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+								</svg>
+								<span>{ task.DueDate.Format("Jan 2") }</span>
+							</div>
 						}
 					</div>
 				}
@@ -69,7 +71,7 @@ templ TaskCard(task model.Task, labels []model.Label, assignees []model.Assignee
 				hx-delete={ fmt.Sprintf("/orgs/%d/projects/%d/tasks/%d", orgID, task.ProjectID, task.ID) }
 				hx-target={ "#task-" + fmt.Sprintf("%d", task.ID) }
 				hx-swap="outerHTML swap:1s"
-        hx-trigger="click consume"
+				hx-trigger="click consume"
 				data-confirm-delete="true"
 				data-task-column-id={ fmt.Sprintf("%d", task.ColumnID) }
 			>
@@ -78,5 +80,18 @@ templ TaskCard(task model.Task, labels []model.Label, assignees []model.Assignee
 				</svg>
 			</button>
 		</div>
+		if len(assignees) > 0 {
+			<div class="absolute bottom-3 right-3 z-10 flex items-center gap-1">
+				@AssigneeBadgeSmall(assignees[0])
+				if len(assignees) > 1 {
+					<span
+						class="text-xs px-1.5 py-0.5 bg-gray-200 text-gray-600 rounded-full font-medium"
+						title={ assigneeNames(assignees[1:]) }
+					>
+						+{ fmt.Sprintf("%d", len(assignees)-1) }
+					</span>
+				}
+			</div>
+		}
 	</div>
 }
