@@ -121,7 +121,7 @@ func (s *Store) MoveTask(ctx context.Context, taskID int64, newColumnID int64, n
 }
 
 // CreateTask inserts a new task at the end of a column.
-func (s *Store) CreateTask(ctx context.Context, projectID int64, title, description string, columnID int64, dueDate *time.Time) (model.Task, error) {
+func (s *Store) CreateTask(ctx context.Context, projectID int64, title, description string, columnID int64, createdBy int64, dueDate *time.Time) (model.Task, error) {
 	var task model.Task
 
 	// Get max position in the column
@@ -135,8 +135,8 @@ func (s *Store) CreateTask(ctx context.Context, projectID int64, title, descript
 
 	// Insert at max + 1
 	err = s.db.GetContext(ctx, &task,
-		"INSERT INTO tasks (project_id, title, description, column_id, position, due_date) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *",
-		projectID, title, description, columnID, maxPos+1, dueDate)
+		"INSERT INTO tasks (project_id, title, description, column_id, position, created_by, due_date) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *",
+		projectID, title, description, columnID, maxPos+1, createdBy, dueDate)
 	if err != nil {
 		return task, fmt.Errorf("creating task: %w", err)
 	}
@@ -192,13 +192,13 @@ func (s *Store) CountTasksByColumn(ctx context.Context, projectID int64, columnI
 }
 
 // UpdateTask updates a task's basic fields.
-func (s *Store) UpdateTask(ctx context.Context, taskID int64, title, description, author string, dueDate *time.Time) error {
+func (s *Store) UpdateTask(ctx context.Context, taskID int64, title, description string, dueDate *time.Time) error {
 	query := `
 		UPDATE tasks
-		SET title = $1, description = $2, author = $3, due_date = $4, updated_at = NOW()
-		WHERE id = $5 AND deleted_at IS NULL
+		SET title = $1, description = $2, due_date = $3, updated_at = NOW()
+		WHERE id = $4 AND deleted_at IS NULL
 	`
-	_, err := s.db.ExecContext(ctx, query, title, description, author, dueDate, taskID)
+	_, err := s.db.ExecContext(ctx, query, title, description, dueDate, taskID)
 	if err != nil {
 		return fmt.Errorf("updating task %d: %w", taskID, err)
 	}
@@ -213,8 +213,6 @@ func (s *Store) UpdateTaskField(ctx context.Context, taskID int64, field string,
 		query = `UPDATE tasks SET title = $1, updated_at = NOW() WHERE id = $2 AND deleted_at IS NULL`
 	case "description":
 		query = `UPDATE tasks SET description = $1, updated_at = NOW() WHERE id = $2 AND deleted_at IS NULL`
-	case "author":
-		query = `UPDATE tasks SET author = $1, updated_at = NOW() WHERE id = $2 AND deleted_at IS NULL`
 	case "due_date":
 		query = `UPDATE tasks SET due_date = $1, updated_at = NOW() WHERE id = $2 AND deleted_at IS NULL`
 	default:
@@ -404,7 +402,6 @@ func (s *Store) SearchOrganizationTasks(ctx context.Context, orgID int64, query 
 					t.column_id,
 					pc.name as column_name,
 					pc.color as column_color,
-					t.author,
 					t.due_date
 				FROM tasks t
 				INNER JOIN projects p ON t.project_id = p.id
@@ -440,7 +437,6 @@ func (s *Store) SearchOrganizationTasks(ctx context.Context, orgID int64, query 
 				t.column_id,
 				pc.name as column_name,
 				pc.color as column_color,
-				t.author,
 				t.due_date
 			FROM tasks t
 			INNER JOIN projects p ON t.project_id = p.id
@@ -486,7 +482,6 @@ func (s *Store) GetRecentOrganizationTasks(ctx context.Context, orgID int64, exc
 			t.column_id,
 			pc.name as column_name,
 			pc.color as column_color,
-			t.author,
 			t.due_date
 		FROM tasks t
 		INNER JOIN projects p ON t.project_id = p.id

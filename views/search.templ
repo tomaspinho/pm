@@ -55,10 +55,6 @@ templ SearchResultsPage(query string, tasks []model.TaskSearchResult, nav NavCon
 										<span>{ task.ProjectName }</span>
 										<span>•</span>
 										<span>{ task.ColumnName }</span>
-										if task.Author != "" {
-											<span>•</span>
-											<span>by { task.Author }</span>
-										}
 									</div>
 								</div>
 								<div class="flex-shrink-0">

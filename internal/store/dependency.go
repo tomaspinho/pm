@@ -33,21 +33,26 @@ func (s *Store) RemoveDependency(ctx context.Context, taskID, dependsOnID int64)
 
 // GetTaskWithDependencies fetches a task with its full dependency information.
 func (s *Store) GetTaskWithDependencies(ctx context.Context, taskID int64) (*model.TaskWithDependencies, error) {
-	// First get the task itself
-	var task model.Task
-	err := s.db.GetContext(ctx, &task,
-		"SELECT * FROM tasks WHERE id = $1 AND deleted_at IS NULL",
-		taskID)
+	// First get the task itself with creator info
+	var result model.TaskWithDependencies
+	err := s.db.GetContext(ctx, &result, `
+		SELECT t.id, t.project_id, t.title, t.description, t.created_by,
+			t.column_id, t.position, t.metadata, t.due_date,
+			t.created_at, t.updated_at, t.deleted_at,
+			u.display_name as created_by_name,
+			u.email as created_by_email
+		FROM tasks t
+		LEFT JOIN users u ON t.created_by = u.id
+		WHERE t.id = $1 AND t.deleted_at IS NULL
+	`, taskID)
 	if err != nil {
 		return nil, fmt.Errorf("getting task %d: %w", taskID, err)
 	}
 
-	result := &model.TaskWithDependencies{Task: task}
-
 	// Get tasks this depends on (blocked by) - WITH column info via JOIN
 	err = s.db.SelectContext(ctx, &result.BlockedBy, `
 		SELECT
-			t.id, t.project_id, t.title, t.description, t.author,
+			t.id, t.project_id, t.title, t.description, t.created_by,
 			t.column_id, t.position, t.metadata, t.due_date,
 			t.created_at, t.updated_at, t.deleted_at,
 			pc.name as column_name,
@@ -67,7 +72,7 @@ func (s *Store) GetTaskWithDependencies(ctx context.Context, taskID int64) (*mod
 	// Get tasks that depend on this (blocking) - WITH column info via JOIN
 	err = s.db.SelectContext(ctx, &result.Blocking, `
 		SELECT
-			t.id, t.project_id, t.title, t.description, t.author,
+			t.id, t.project_id, t.title, t.description, t.created_by,
 			t.column_id, t.position, t.metadata, t.due_date,
 			t.created_at, t.updated_at, t.deleted_at,
 			pc.name as column_name,
@@ -103,7 +108,7 @@ func (s *Store) GetTaskWithDependencies(ctx context.Context, taskID int64) (*mod
 	}
 	result.Assignees = assignees
 
-	return result, nil
+	return &result, nil
 }
 
 // detectCircularDependency checks if a task is part of a circular dependency chain.

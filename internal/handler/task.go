@@ -156,16 +156,19 @@ func (h *Handler) HandleCreateTask(c fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
 
-	task, err := h.store.CreateTask(c.Context(), projectID, title, description, columnID, dueDate)
+	// Get current user for created_by
+	user, err := middleware.GetCurrentUser(c)
+	if err != nil {
+		return fiber.NewError(fiber.StatusUnauthorized, "user not authenticated")
+	}
+
+	task, err := h.store.CreateTask(c.Context(), projectID, title, description, columnID, user.ID, dueDate)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to create task")
 	}
 
 	// Create activity record for task creation
-	user, err := middleware.GetCurrentUser(c)
-	if err == nil {
-		_ = h.store.CreateActivity(c.Context(), task.ID, user.ID, "create", "", nil, nil)
-	}
+	_ = h.store.CreateActivity(c.Context(), task.ID, user.ID, "create", "", nil, nil)
 
 	// Get updated count.
 	count, err := h.store.CountTasksByColumn(c.Context(), projectID, columnID)
@@ -288,8 +291,6 @@ func (h *Handler) HandleGetTaskField(c fiber.Ctx) error {
 		return render(c, components.TitleSection(*taskWithDeps, orgID, edit))
 	case "description":
 		return render(c, components.DescriptionSection(*taskWithDeps, orgID, edit))
-	case "author":
-		return render(c, components.AuthorSection(*taskWithDeps, orgID, edit))
 	case "due_date":
 		return render(c, components.DueDateSection(*taskWithDeps, orgID, edit))
 	default:
@@ -318,7 +319,6 @@ func (h *Handler) HandleUpdateTask(c fiber.Ctx) error {
 
 	title := c.FormValue("title")
 	description := c.FormValue("description")
-	author := c.FormValue("author")
 
 	if title == "" {
 		return fiber.NewError(fiber.StatusBadRequest, "title is required")
@@ -334,12 +334,12 @@ func (h *Handler) HandleUpdateTask(c fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusNotFound, "task not found")
 	}
 
-	err = h.store.UpdateTask(c.Context(), taskID, title, description, author, dueDate)
+	err = h.store.UpdateTask(c.Context(), taskID, title, description, dueDate)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to update task")
 	}
 
-	h.logFieldChanges(c, currentTask, title, description, author, dueDate)
+	h.logFieldChanges(c, currentTask, title, description, dueDate)
 
 	taskWithDeps, err := h.store.GetTaskWithDependencies(c.Context(), taskID)
 	if err != nil {
@@ -379,10 +379,6 @@ func (h *Handler) handleFieldUpdate(c fiber.Ctx, orgID, taskID int64, field stri
 		newValue = c.FormValue("description")
 		oldValue = currentTask.Description
 		err = h.store.UpdateTaskField(c.Context(), taskID, "description", newValue)
-	case "author":
-		newValue = c.FormValue("author")
-		oldValue = currentTask.Author
-		err = h.store.UpdateTaskField(c.Context(), taskID, "author", newValue)
 	case "due_date":
 		dueDate, parseErr := parseDueDate(c.FormValue("due_date"))
 		if parseErr != nil {
@@ -424,7 +420,7 @@ func (h *Handler) handleFieldUpdate(c fiber.Ctx, orgID, taskID int64, field stri
 	return render(c, views.TaskFieldSectionUpdate(*taskWithDeps, orgID, taskLabels, taskAssignees, field))
 }
 
-func (h *Handler) logFieldChanges(c fiber.Ctx, currentTask *model.Task, title, description, author string, dueDate *time.Time) {
+func (h *Handler) logFieldChanges(c fiber.Ctx, currentTask *model.Task, title, description string, dueDate *time.Time) {
 	user, err := middleware.GetCurrentUser(c)
 	if err != nil {
 		return
@@ -434,9 +430,6 @@ func (h *Handler) logFieldChanges(c fiber.Ctx, currentTask *model.Task, title, d
 	}
 	if currentTask.Description != description {
 		_ = h.store.CreateActivity(c.Context(), currentTask.ID, user.ID, "update", "description", currentTask.Description, description)
-	}
-	if currentTask.Author != author {
-		_ = h.store.CreateActivity(c.Context(), currentTask.ID, user.ID, "update", "author", currentTask.Author, author)
 	}
 	var dueDateStr string
 	if dueDate != nil {

@@ -11,7 +11,7 @@ type Task struct {
 	ProjectID   int64        `db:"project_id"  json:"project_id"`
 	Title       string       `db:"title"       json:"title"`
 	Description string       `db:"description" json:"description"`
-	Author      string       `db:"author"      json:"author"`
+	CreatedBy   *int64       `db:"created_by"  json:"created_by,omitempty"`
 	ColumnID    int64        `db:"column_id"   json:"column_id"`
 	Position    int          `db:"position"    json:"position"`
 	Metadata    TaskMetadata `db:"metadata"    json:"metadata"`
@@ -74,7 +74,6 @@ type TaskSearchResult struct {
 	ColumnID    int64      `db:"column_id" json:"column_id"`
 	ColumnName  string     `db:"column_name" json:"column_name"`
 	ColumnColor string     `db:"column_color" json:"column_color"`
-	Author      string     `db:"author" json:"author"`
 	DueDate     *time.Time `db:"due_date" json:"due_date,omitempty"`
 	Labels      []Label    `db:"-" json:"labels,omitempty"`
 }

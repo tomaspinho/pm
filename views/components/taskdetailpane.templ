@@ -132,11 +132,22 @@ templ TaskDetailPane(taskWithDeps model.TaskWithDependencies, orgID int64, proje
 						@DescriptionField(taskWithDeps, orgID, false)
 					</div>
 				</div>
-				<!-- Author -->
+				<!-- Created By -->
 				<div class="space-y-2">
-					<label class="block text-xs font-medium text-gray-500 uppercase tracking-wide">Author</label>
-					<div id={ "author-section-" + fmt.Sprintf("%d", taskWithDeps.ID) }>
-						@authorField(taskWithDeps, orgID, false)
+					<label class="block text-xs font-medium text-gray-500 uppercase tracking-wide">Created By</label>
+					<div class="flex items-center gap-2">
+						if taskWithDeps.CreatedByName != "" {
+							<span
+								class="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-medium flex-shrink-0"
+								style={ "background-color: " + taskWithDeps.CreatorAvatarColor() }
+								title={ taskWithDeps.CreatedByEmail }
+							>
+								{ taskWithDeps.CreatorInitials() }
+							</span>
+							<span class="text-sm text-gray-700">{ taskWithDeps.CreatedByName }</span>
+						} else {
+							<span class="text-sm text-gray-400 italic">System</span>
+						}
 					</div>
 				</div>
 				<!-- Assignees -->
@@ -787,67 +798,6 @@ templ DescriptionField(taskWithDeps model.TaskWithDependencies, orgID int64, isE
 	}
 }
 
-// authorField renders the author field - display mode if !isEditing, form mode if isEditing
-templ authorField(taskWithDeps model.TaskWithDependencies, orgID int64, isEditing bool) {
-	if isEditing {
-		<form
-			hx-patch={ taskURLPrefix(orgID, taskWithDeps.ProjectID) + "/" + fmt.Sprintf("%d", taskWithDeps.ID) }
-			hx-target={ "#author-section-" + fmt.Sprintf("%d", taskWithDeps.ID) }
-			hx-swap="outerHTML"
-		>
-			<input type="hidden" name="field" value="author"/>
-			<input
-				type="text"
-				name="author"
-				value={ taskWithDeps.Author }
-				class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-			/>
-			<div class="flex gap-2 mt-2">
-				<button type="submit" class="px-3 py-1.5 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 cursor-pointer">
-					Save
-				</button>
-				<button
-					type="button"
-					class="px-3 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 cursor-pointer"
-					hx-get={ taskURLPrefix(orgID, taskWithDeps.ProjectID) + "/" + fmt.Sprintf("%d", taskWithDeps.ID) + "/field?field=author" }
-					hx-target={ "#author-section-" + fmt.Sprintf("%d", taskWithDeps.ID) }
-					hx-swap="outerHTML"
-				>
-					Cancel
-				</button>
-			</div>
-		</form>
-	} else {
-		<div class="editable-field group">
-			<div class="flex items-center gap-2">
-				<p
-					class="text-sm text-gray-700 flex-1 cursor-pointer"
-					hx-get={ taskURLPrefix(orgID, taskWithDeps.ProjectID) + "/" + fmt.Sprintf("%d", taskWithDeps.ID) + "/field?field=author&edit=true" }
-					hx-target={ "#author-section-" + fmt.Sprintf("%d", taskWithDeps.ID) }
-					hx-swap="outerHTML"
-				>
-					if taskWithDeps.Author != "" {
-						{ taskWithDeps.Author }
-					} else {
-						<span class="text-gray-400 italic">No author</span>
-					}
-				</p>
-				<button
-					type="button"
-					class="edit-btn opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 cursor-pointer"
-					hx-get={ taskURLPrefix(orgID, taskWithDeps.ProjectID) + "/" + fmt.Sprintf("%d", taskWithDeps.ID) + "/field?field=author&edit=true" }
-					hx-target={ "#author-section-" + fmt.Sprintf("%d", taskWithDeps.ID) }
-					hx-swap="outerHTML"
-				>
-					<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
-					</svg>
-				</button>
-			</div>
-		</div>
-	}
-}
-
 // DueDateField renders the due date field - display mode if !isEditing, form mode if isEditing
 templ DueDateField(taskWithDeps model.TaskWithDependencies, orgID int64, isEditing bool) {
 	if isEditing {
@@ -921,13 +871,6 @@ templ TitleSection(taskWithDeps model.TaskWithDependencies, orgID int64, isEditi
 templ DescriptionSection(taskWithDeps model.TaskWithDependencies, orgID int64, isEditing bool) {
 	<div id={ "description-section-" + fmt.Sprintf("%d", taskWithDeps.ID) }>
 		@DescriptionField(taskWithDeps, orgID, isEditing)
-	</div>
-}
-
-// AuthorSection renders the full author section container for htmx swaps
-templ AuthorSection(taskWithDeps model.TaskWithDependencies, orgID int64, isEditing bool) {
-	<div id={ "author-section-" + fmt.Sprintf("%d", taskWithDeps.ID) }>
-		@authorField(taskWithDeps, orgID, isEditing)
 	</div>
 }
 

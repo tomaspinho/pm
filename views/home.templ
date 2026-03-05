@@ -235,14 +235,12 @@ templ TaskFieldUpdateResponse(taskWithDeps model.TaskWithDependencies, orgID int
 // TaskFieldSectionUpdate returns the field section and task card OOB update.
 templ TaskFieldSectionUpdate(taskWithDeps model.TaskWithDependencies, orgID int64, labels []model.Label, assignees []model.AssigneeInfo, field string) {
 	switch field {
-		case "title":
-			@components.TitleSection(taskWithDeps, orgID, false)
-		case "description":
-			@components.DescriptionSection(taskWithDeps, orgID, false)
-		case "author":
-			@components.AuthorSection(taskWithDeps, orgID, false)
-		case "due_date":
-			@components.DueDateSection(taskWithDeps, orgID, false)
+	case "title":
+		@components.TitleSection(taskWithDeps, orgID, false)
+	case "description":
+		@components.DescriptionSection(taskWithDeps, orgID, false)
+	case "due_date":
+		@components.DueDateSection(taskWithDeps, orgID, false)
 	}
 	@components.TaskCard(taskWithDeps.Task, labels, assignees, orgID, true)
 }
