@@ -53,12 +53,12 @@ templ AddTaskForm(columnID int64, orgID int64, projectID int64, labels []model.L
 							+ Add label
 						</button>
 						<div
-							class="hidden absolute z-50 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto min-w-[150px] add-task-label-dropdown"
+							class="hidden absolute z-50 bg-white border border-gray-300 rounded-lg shadow-lg p-2 min-w-[200px] add-task-label-dropdown"
 						>
 							for _, label := range labels {
 								<button
 									type="button"
-									class="w-full text-left px-2 py-1.5 hover:bg-gray-100 flex items-center gap-2 text-sm cursor-pointer"
+									class="w-full text-left px-3 py-2 rounded-lg flex items-center gap-2 transition-colors bg-gray-50 hover:bg-gray-100 border border-gray-200 cursor-pointer"
 									data-label-id={ fmt.Sprintf("%d", label.ID) }
 									data-label-name={ label.Name }
 									data-label-color={ label.Color }
@@ -66,7 +66,7 @@ templ AddTaskForm(columnID int64, orgID int64, projectID int64, labels []model.L
 									onclick="toggleTaskLabel(this)"
 								>
 									<span class="w-3 h-3 rounded-full flex-shrink-0" style={ "background-color: " + label.Color }></span>
-									<span>{ label.Name }</span>
+									<span class="text-sm">{ label.Name }</span>
 								</button>
 							}
 						</div>
@@ -151,6 +151,13 @@ templ AddTaskForm(columnID int64, orgID int64, projectID int64, labels []model.L
 					dropdown.classList.toggle('hidden');
 
 					if (wasHidden) {
+						var rect = toggleBtn.getBoundingClientRect();
+						dropdown.style.position = 'fixed';
+						dropdown.style.left = rect.left + 'px';
+						dropdown.style.top = (rect.bottom + 5) + 'px';
+						dropdown.style.maxHeight = '200px';
+						dropdown.style.overflowY = 'auto';
+
 						function hideDropdown(event) {
 							if (!dropdown.contains(event.target) && !toggleBtn.contains(event.target)) {
 								dropdown.classList.add('hidden');

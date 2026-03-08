@@ -12,7 +12,7 @@ templ LabelSection(taskID int64, labels []model.Label, allLabels []model.Label, 
 			Labels
 		</label>
 		<!-- Add Label Form (dropdown) -->
-		<div class="label-dropdown hidden absolute z-50 bg-white border border-gray-300 rounded-lg shadow-lg p-2 min-w-[200px]">
+		<div class="label-dropdown hidden absolute z-50 bg-white border border-gray-300 rounded-lg shadow-lg p-2 min-w-[200px] max-h-[200px] overflow-y-auto">
 			@renderLabelDropdownItems(taskID, labels, allLabels, orgID, projectID)
 		</div>
 		<div class="label-list-container">
