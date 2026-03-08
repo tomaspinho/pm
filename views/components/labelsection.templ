@@ -7,66 +7,61 @@ import (
 
 // LabelSection renders the complete labels section for a task (for htmx swaps)
 templ LabelSection(taskID int64, labels []model.Label, allLabels []model.Label, orgID int64, projectID int64, currentUser model.User) {
-	<div id={"label-section-" + fmt.Sprintf("%d", taskID)} class="label-section space-y-2 relative" data-task-id={ fmt.Sprintf("%d", taskID) } data-org-id={ fmt.Sprintf("%d", orgID) } data-project-id={ fmt.Sprintf("%d", projectID) }>
+	<div 
+		id={"label-section-" + fmt.Sprintf("%d", taskID)} 
+		class="label-section space-y-2 relative" 
+		data-task-id={ fmt.Sprintf("%d", taskID) } 
+		data-org-id={ fmt.Sprintf("%d", orgID) } 
+		data-project-id={ fmt.Sprintf("%d", projectID) }
+		hx-on::after-swap="if(window.labelDropdownOpen==this.dataset.taskId){this.querySelector('.label-dropdown').classList.remove('hidden');window.labelDropdownOpen=null}"
+	>
 		<label class="block text-xs font-medium text-gray-500 uppercase tracking-wide">
 			Labels
 		</label>
 		<!-- Add Label Form (dropdown) -->
-		<div class="label-dropdown hidden absolute z-50 bg-white border border-gray-300 rounded-lg shadow-lg p-2 min-w-[200px] max-h-[200px] overflow-y-auto">
-			@renderLabelDropdownItems(taskID, labels, allLabels, orgID, projectID)
+		<div class="label-dropdown hidden fixed z-50 bg-white border border-gray-300 rounded-lg shadow-lg p-2 min-w-[200px] max-h-[200px] overflow-y-auto">
+			@LabelDropdownItems(taskID, labels, allLabels, orgID, projectID)
 		</div>
-		<div class="label-list-container">
+		<div class="label-list-container" id={"label-list-container-" + fmt.Sprintf("%d", taskID)}>
 			@LabelList(taskID, labels, orgID, projectID)
 		</div>
 		<button
 			type="button"
 			class="add-label-btn relative text-sm font-medium text-indigo-600 hover:text-indigo-700 cursor-pointer"
-      onclick="AddLabel(event);"
+			onclick="toggleLabelDropdown(this)"
 		>
 			+ Add Label
 		</button>
-		<!-- Hidden elements for script access -->
-		<input type="hidden" class="task-id-input" value={ fmt.Sprintf("%d", taskID) } />
 	</div>
 	<script>
-		function AddLabel(e) {
-				var addLabelBtn = e.target.closest('.add-label-btn');
-				var clickedInsideDropdown = e.target.closest('.label-dropdown');
-				if (addLabelBtn) {
-					var section = addLabelBtn.closest('.label-section');
-					var dropdown = section.querySelector('.label-dropdown');
-					var wasHidden = dropdown.classList.contains('hidden');
-					dropdown.classList.toggle('hidden');
-					if (wasHidden) {
-						var rect = addLabelBtn.getBoundingClientRect();
-						dropdown.style.position = 'fixed';
-						dropdown.style.left = rect.left + 'px';
-						dropdown.style.top = (rect.bottom + 5) + 'px';
+		function toggleLabelDropdown(btn) {
+			var section = btn.closest('.label-section');
+			var dropdown = section.querySelector('.label-dropdown');
+			var wasHidden = dropdown.classList.contains('hidden');
 
-            function HideAddLabelDropdown(event) {
-              if (!dropdown.contains(event.target)) {
-                console.log('Clicked outside the element!');
-					      dropdown.classList.toggle('hidden');
-                document.removeEventListener('click', HideAddLabelDropdown);
-              }
-            }
+			document.querySelectorAll('.label-dropdown').forEach(function(dd) {
+				if (dd !== dropdown) dd.classList.add('hidden');
+			});
 
-            event.stopPropagation();
+			dropdown.classList.toggle('hidden');
 
-            document.addEventListener('click', HideAddLabelDropdown);
+			if (wasHidden) {
+				var rect = btn.getBoundingClientRect();
+				dropdown.style.left = rect.left + 'px';
+				dropdown.style.top = (rect.bottom + 5) + 'px';
+
+				function hideDropdown(event) {
+					if (!dropdown.contains(event.target) && !btn.contains(event.target)) {
+						dropdown.classList.add('hidden');
+						document.removeEventListener('click', hideDropdown);
 					}
-				} else if (!clickedInsideDropdown) {
-					document.querySelectorAll('.label-dropdown').forEach(function(dd) {
-						dd.classList.add('hidden');
-						var section = dd.closest('.label-section');
-						if (section) {
-							var listContainer = section.querySelector('.label-list-container');
-							if (listContainer) listContainer.classList.remove('hidden');
-						}
-					});
 				}
+				setTimeout(function() {
+					document.addEventListener('click', hideDropdown);
+				}, 0);
+			}
 		}
-  </script>
+	</script>
 }
 
 func isLabelApplied(labels []model.Label, labelID int64) bool {
@@ -78,35 +73,48 @@ func isLabelApplied(labels []model.Label, labelID int64) bool {
 	return false
 }
 
-templ renderLabelDropdownItems(taskID int64, labels []model.Label, allLabels []model.Label, orgID int64, projectID int64) {
+// LabelDropdownItems renders all labels with applied state indicators
+templ LabelDropdownItems(taskID int64, appliedLabels []model.Label, allLabels []model.Label, orgID int64, projectID int64) {
 	if len(allLabels) > 0 {
-		for _, label := range allLabels {
-			if ! isLabelApplied(labels, label.ID) {
-				<button
-					type="button"
-					class="w-full text-left px-3 py-2 rounded-lg flex items-center gap-2 transition-colors bg-gray-50 hover:bg-gray-100 border border-gray-200 cursor-pointer"
-					hx-post={ fmt.Sprintf("/orgs/%d/projects/%d/tasks/%d/labels/%d", orgID, projectID, taskID, label.ID) }
-					hx-target="closest .label-section"
-					hx-swap="outerHTML"
-				>
-					<span class="w-3 h-3 rounded-full flex-shrink-0" style={ "background-color: " + label.Color }></span>
-					<span class="text-sm">{ label.Name }</span>
-				</button>
-			}/* else {
-				<button
-					type="button"
-					class="w-full text-left px-3 py-2 rounded-lg flex items-center gap-2 transition-colors bg-gray-100 border border-gray-200 text-gray-900"
-					hx-delete={ fmt.Sprintf("/orgs/%d/projects/%d/tasks/%d/labels/%d", orgID, projectID, taskID, label.ID) }
-					hx-target="closest .label-section"
-					hx-swap="outerHTML"
-				>
-					<span class="w-3 h-3 rounded-full flex-shrink-0" style={ "background-color: " + label.Color }></span>
-					<span class="text-sm">{ label.Name }</span>
-				</button>
-			}*/
-		}
+		<div class="space-y-1">
+			for _, label := range allLabels {
+				@LabelDropdownItem(taskID, label, isLabelApplied(appliedLabels, label.ID), orgID, projectID)
+			}
+		</div>
 	} else {
 		<p class="text-sm text-gray-500 italic px-3 py-2">No labels configured</p>
+	}
+}
+
+// LabelDropdownItem renders a single label in the dropdown with toggle behavior
+templ LabelDropdownItem(taskID int64, label model.Label, isApplied bool, orgID int64, projectID int64) {
+	if isApplied {
+		<button
+			type="button"
+			class="w-full text-left px-3 py-2 rounded-lg flex items-center gap-2 transition-colors bg-indigo-100 hover:bg-indigo-200 border border-indigo-200 cursor-pointer label-dropdown-item"
+			hx-delete={ fmt.Sprintf("/orgs/%d/projects/%d/tasks/%d/labels/%d", orgID, projectID, taskID, label.ID) }
+			hx-target={ "#label-section-" + fmt.Sprintf("%d", taskID) }
+			hx-swap="outerHTML"
+			onclick="window.labelDropdownOpen=this.closest('.label-section').dataset.taskId"
+		>
+			<span class="w-3 h-3 rounded-full flex-shrink-0" style={ "background-color: " + label.Color }></span>
+			<span class="text-sm flex-1">{ label.Name }</span>
+			<svg class="w-4 h-4 text-indigo-600" fill="currentColor" viewBox="0 0 20 20">
+				<path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+			</svg>
+		</button>
+	} else {
+		<button
+			type="button"
+			class="w-full text-left px-3 py-2 rounded-lg flex items-center gap-2 transition-colors bg-gray-50 hover:bg-gray-100 border border-gray-200 cursor-pointer label-dropdown-item"
+			hx-post={ fmt.Sprintf("/orgs/%d/projects/%d/tasks/%d/labels/%d", orgID, projectID, taskID, label.ID) }
+			hx-target={ "#label-section-" + fmt.Sprintf("%d", taskID) }
+			hx-swap="outerHTML"
+			onclick="window.labelDropdownOpen=this.closest('.label-section').dataset.taskId"
+		>
+			<span class="w-3 h-3 rounded-full flex-shrink-0" style={ "background-color: " + label.Color }></span>
+			<span class="text-sm">{ label.Name }</span>
+		</button>
 	}
 }
 
