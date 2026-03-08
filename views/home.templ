@@ -193,8 +193,8 @@ func intToStr(n int) string {
 }
 
 // NewTaskResponse returns the new task card plus out-of-band updates.
-templ NewTaskResponse(task model.Task, orgID int64, columnID int64, count int) {
-	@components.TaskCard(task, nil, nil, orgID, false)
+templ NewTaskResponse(task model.Task, orgID int64, columnID int64, count int, labels []model.Label, assignees []model.AssigneeInfo) {
+	@components.TaskCard(task, labels, assignees, orgID, false)
 	<!-- Out-of-band: update count -->
 	<span id={ fmt.Sprintf("count-%d", columnID) } hx-swap-oob="true" class="text-xs text-gray-400 bg-gray-100 rounded-full px-2 py-0.5">
 		{ intToStr(count) }

@@ -108,7 +108,22 @@ func (h *Handler) HandleNewTaskForm(c fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "columnID is required")
 	}
 
-	return render(c, components.AddTaskForm(columnID, orgID, projectID))
+	user, err := middleware.GetCurrentUser(c)
+	if err != nil {
+		return fiber.NewError(fiber.StatusUnauthorized, "user not authenticated")
+	}
+
+	labels, err := h.store.GetProjectLabels(c.Context(), projectID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to load labels")
+	}
+
+	members, err := h.store.GetOrganizationMembers(c.Context(), orgID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to load members")
+	}
+
+	return render(c, components.AddTaskForm(columnID, orgID, projectID, labels, members, *user))
 }
 
 // HandleCancelForm returns the "Add task" button HTML.
@@ -156,7 +171,6 @@ func (h *Handler) HandleCreateTask(c fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
 
-	// Get current user for created_by
 	user, err := middleware.GetCurrentUser(c)
 	if err != nil {
 		return fiber.NewError(fiber.StatusUnauthorized, "user not authenticated")
@@ -167,16 +181,55 @@ func (h *Handler) HandleCreateTask(c fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to create task")
 	}
 
-	// Create activity record for task creation
 	_ = h.store.CreateActivity(c.Context(), task.ID, user.ID, "create", "", nil, nil)
 
-	// Get updated count.
+	labelIDs := c.Request().PostArgs().PeekMulti("label_ids")
+	for _, labelIDStr := range labelIDs {
+		labelID, parseErr := strconv.ParseInt(string(labelIDStr), 10, 64)
+		if parseErr != nil {
+			continue
+		}
+		if addErr := h.store.AddLabelToTask(c.Context(), task.ID, labelID); addErr != nil {
+			continue
+		}
+		if label, getErr := h.store.GetProjectLabel(c.Context(), labelID); getErr == nil {
+			_ = h.store.CreateActivity(c.Context(), task.ID, user.ID, "add_label", "", nil, map[string]string{"label_name": label.Name, "label_id": fmt.Sprintf("%d", labelID)})
+		}
+	}
+
+	assignMe := c.FormValue("assign_me") == "on"
+	if assignMe {
+		if assignErr := h.store.AssignUserToTask(c.Context(), task.ID, user.ID); assignErr == nil {
+			_ = h.store.CreateActivity(c.Context(), task.ID, user.ID, "assign", "", nil, map[string]string{"user": user.DisplayName, "email": user.Email})
+		}
+	}
+
+	assigneeIDs := c.Request().PostArgs().PeekMulti("assignee_ids")
+	for _, assigneeIDStr := range assigneeIDs {
+		assigneeID, parseErr := strconv.ParseInt(string(assigneeIDStr), 10, 64)
+		if parseErr != nil {
+			continue
+		}
+		if assignMe && assigneeID == user.ID {
+			continue
+		}
+		if assignErr := h.store.AssignUserToTask(c.Context(), task.ID, assigneeID); assignErr != nil {
+			continue
+		}
+		if assignedUser, getErr := h.store.GetUserByID(c.Context(), assigneeID); getErr == nil {
+			_ = h.store.CreateActivity(c.Context(), task.ID, user.ID, "assign", "", nil, map[string]string{"user": assignedUser.DisplayName, "email": assignedUser.Email})
+		}
+	}
+
+	taskLabels, _ := h.store.GetTaskLabels(c.Context(), task.ID)
+	taskAssignees, _ := h.store.GetTaskAssignees(c.Context(), task.ID)
+
 	count, err := h.store.CountTasksByColumn(c.Context(), projectID, columnID)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to get task count")
 	}
 
-	return render(c, views.NewTaskResponse(task, orgID, columnID, count))
+	return render(c, views.NewTaskResponse(task, orgID, columnID, count, taskLabels, taskAssignees))
 }
 
 // HandleDeleteTask deletes a task and returns OOB count update.
