@@ -82,12 +82,12 @@ templ LabelSection(taskID int64, labels []model.Label, allLabels []model.Label, 
 				btn.classList.remove('bg-indigo-100', 'border-indigo-200');
 				btn.classList.add('bg-gray-50', 'hover:bg-gray-100', 'border-gray-200');
 				btn.setAttribute('data-action', 'POST');
-				if (checkmark) checkmark.classList.add('hidden');
+				if (checkmark) checkmark.classList.add('invisible');
 			} else {
 				btn.classList.remove('bg-gray-50', 'hover:bg-gray-100', 'border-gray-200');
 				btn.classList.add('bg-indigo-100', 'border-indigo-200');
 				btn.setAttribute('data-action', 'DELETE');
-				if (checkmark) checkmark.classList.remove('hidden');
+				if (checkmark) checkmark.classList.remove('invisible');
 			}
 
 			// Update label chips list
@@ -110,7 +110,14 @@ templ LabelSection(taskID int64, labels []model.Label, allLabels []model.Label, 
 				chip.setAttribute('data-label-id', labelID);
 				chip.setAttribute('data-label-name', labelName);
 				chip.setAttribute('data-label-color', labelColor);
-				chip.innerHTML = labelName + '<span class="cursor-pointer hover:text-white/80 opacity-0 group-hover:opacity-100" onclick="removeLabelChipFromButton(this)">&times;</span>';
+				var chipContent = document.createElement('span');
+				chipContent.textContent = labelName;
+				chip.appendChild(chipContent);
+				var removeBtn = document.createElement('span');
+				removeBtn.className = 'cursor-pointer hover:text-white/80 opacity-0 group-hover:opacity-100 ml-1';
+				removeBtn.textContent = '\u00D7';
+				removeBtn.onclick = function() { removeLabelChipFromButton(this); };
+				chip.appendChild(removeBtn);
 				chipContainer.appendChild(chip);
 			}
 
@@ -146,8 +153,9 @@ templ LabelSection(taskID int64, labels []model.Label, allLabels []model.Label, 
 			if (btn) {
 				btn.classList.remove('bg-indigo-100', 'border-indigo-200');
 				btn.classList.add('bg-gray-50', 'hover:bg-gray-100', 'border-gray-200');
+				btn.setAttribute('data-action', 'POST');
 				var checkmark = btn.querySelector('svg');
-				if (checkmark) checkmark.classList.add('hidden');
+				if (checkmark) checkmark.classList.add('invisible');
 			}
 
 			// Make the request
@@ -179,7 +187,7 @@ templ LabelDropdownItem(taskID int64, label model.Label, isApplied bool, orgID i
 	>
 		<span class="w-3 h-3 rounded-full flex-shrink-0" style={ "background-color: " + label.Color }></span>
 		<span class="text-sm flex-1">{ label.Name }</span>
-		<svg class={ "w-4 h-4 text-indigo-600 " + ternary(isApplied, "", "hidden") } fill="currentColor" viewBox="0 0 20 20">
+		<svg class={ "w-4 h-4 text-indigo-600 flex-shrink-0 " + ternary(isApplied, "", "invisible") } fill="currentColor" viewBox="0 0 20 20">
 			<path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
 		</svg>
 	</button>

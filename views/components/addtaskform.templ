@@ -67,7 +67,7 @@ templ AddTaskForm(columnID int64, orgID int64, projectID int64, labels []model.L
 								>
 									<span class="w-3 h-3 rounded-full flex-shrink-0" style={ "background-color: " + label.Color }></span>
 									<span class="text-sm flex-1">{ label.Name }</span>
-									<svg class="w-4 h-4 text-indigo-600 hidden" fill="currentColor" viewBox="0 0 20 20" data-checkmark>
+									<svg class="w-4 h-4 text-indigo-600 invisible flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" data-checkmark>
 										<path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
 									</svg>
 								</button>
@@ -133,7 +133,7 @@ templ AddTaskForm(columnID int64, orgID int64, projectID int64, labels []model.L
 				existing.remove();
 				btn.classList.remove('bg-indigo-100', 'border-indigo-200', 'hover:bg-indigo-100');
 				btn.classList.add('bg-gray-50', 'hover:bg-gray-100', 'border-gray-200');
-				checkmark.classList.add('hidden');
+				checkmark.classList.add('invisible');
 			} else {
 				var chip = document.createElement('span');
 				chip.className = 'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border';
@@ -145,7 +145,7 @@ templ AddTaskForm(columnID int64, orgID int64, projectID int64, labels []model.L
 				selectedContainer.appendChild(chip);
 				btn.classList.remove('bg-gray-50', 'hover:bg-gray-100', 'border-gray-200');
 				btn.classList.add('bg-indigo-100', 'hover:bg-indigo-100', 'border-indigo-200');
-				checkmark.classList.remove('hidden');
+				checkmark.classList.remove('invisible');
 			}
 		}
 
@@ -159,7 +159,7 @@ templ AddTaskForm(columnID int64, orgID int64, projectID int64, labels []model.L
 					var checkmark = btn.querySelector('[data-checkmark]');
 					btn.classList.remove('bg-indigo-100', 'border-indigo-200', 'hover:bg-indigo-100');
 					btn.classList.add('bg-gray-50', 'hover:bg-gray-100', 'border-gray-200');
-					if (checkmark) checkmark.classList.add('hidden');
+					if (checkmark) checkmark.classList.add('invisible');
 				}
 			}
 		}
