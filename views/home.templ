@@ -340,11 +340,3 @@ templ BoardPageWithTask(project model.Project, columns []model.ProjectColumn, ta
 		@TaskDetailPane(*taskWithDeps, nav.CurrentOrgID, project.ID, comments, user, activity, taskLabels, allLabels)
 	}
 }
-
-templ LabelUpdateResponse(taskID int64, labels []model.Label, orgID int64, projectID int64) {
-	<div id={ "task-labels-" + fmt.Sprintf("%d", taskID) } hx-swap-oob="true">
-		for _, label := range labels {
-			@components.LabelChip(label, true, orgID, projectID, taskID)
-		}
-	</div>
-}

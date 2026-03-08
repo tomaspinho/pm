@@ -7,7 +7,6 @@ import (
 
 	"pm/internal/middleware"
 	"pm/views"
-	"pm/views/components"
 
 	"github.com/gofiber/fiber/v3"
 )
@@ -356,27 +355,7 @@ func (h *Handler) HandleAddLabelToTask(c fiber.Ctx) error {
 		_ = h.store.CreateActivity(c.Context(), taskID, userID, "add_label", "", nil, newValue)
 	}
 
-	// Fetch updated labels
-	labels, err := h.store.GetTaskLabels(ctx, taskID)
-	if err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, "failed to load updated labels")
-	}
-
-	// Load all project labels for dropdown
-	allLabels, err := h.store.GetProjectLabels(ctx, projectID)
-	if err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, "failed to load project labels")
-	}
-
-	// Return the full LabelSection for the outerHTML swap
-	user, err := middleware.GetCurrentUser(c)
-	if err != nil {
-		return c.Redirect().To("/login")
-	}
-
-	orgID, _ := strconv.ParseInt(c.Params("org_id"), 10, 64)
-
-	return render(c, components.LabelSection(taskID, labels, allLabels, orgID, projectID, *user))
+	return c.SendStatus(fiber.StatusNoContent)
 }
 
 // HandleRemoveLabelFromTask removes a label from a task
@@ -426,25 +405,5 @@ func (h *Handler) HandleRemoveLabelFromTask(c fiber.Ctx) error {
 		_ = h.store.CreateActivity(c.Context(), taskID, userID, "remove_label", "", oldValue, nil)
 	}
 
-	// Fetch updated labels
-	labels, err := h.store.GetTaskLabels(ctx, taskID)
-	if err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, "failed to load updated labels")
-	}
-
-	// Load all project labels for dropdown
-	allLabels, err := h.store.GetProjectLabels(ctx, projectID)
-	if err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, "failed to load project labels")
-	}
-
-	// Return the full LabelSection for the outerHTML swap
-	user, err := middleware.GetCurrentUser(c)
-	if err != nil {
-		return c.Redirect().To("/login")
-	}
-
-	orgID, _ := strconv.ParseInt(c.Params("org_id"), 10, 64)
-
-	return render(c, components.LabelSection(taskID, labels, allLabels, orgID, projectID, *user))
+	return c.SendStatus(fiber.StatusNoContent)
 }
