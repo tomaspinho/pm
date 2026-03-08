@@ -126,8 +126,30 @@ templ LabelSection(taskID int64, labels []model.Label, allLabels []model.Label, 
 			fetch(url, { method: action, headers: { 'Content-Type': 'application/json' } })
 				.then(function(response) {
 					if (!response.ok) {
-						// Revert on error
 						location.reload();
+						return;
+					}
+					return response.text();
+				})
+				.then(function(html) {
+					if (!html) return;
+					// Parse response and update kanban card via OOB swap
+					var parser = new DOMParser();
+					var doc = parser.parseFromString(html, 'text/html');
+					var oobElement = doc.querySelector('[hx-swap-oob="true"]');
+					if (oobElement) {
+						var targetId = oobElement.id;
+						var existingCard = document.getElementById(targetId);
+						if (existingCard) {
+							existingCard.outerHTML = oobElement.outerHTML;
+							// Re-init Sortable on the new card if needed
+							if (window.Sortable) {
+								var parentCol = document.querySelector('[data-column-id]');
+								if (parentCol && parentCol.sortableInstance) {
+									parentCol.sortableInstance.option('group', 'kanban');
+								}
+							}
+						}
 					}
 				})
 				.catch(function() {
@@ -160,7 +182,31 @@ templ LabelSection(taskID int64, labels []model.Label, allLabels []model.Label, 
 
 			// Make the request
 			var url = '/orgs/' + orgID + '/projects/' + projectID + '/tasks/' + taskID + '/labels/' + labelID;
-			fetch(url, { method: 'DELETE' });
+			fetch(url, { method: 'DELETE' })
+				.then(function(response) {
+					if (!response.ok) {
+						location.reload();
+						return;
+					}
+					return response.text();
+				})
+				.then(function(html) {
+					if (!html) return;
+					// Parse response and update kanban card via OOB swap
+					var parser = new DOMParser();
+					var doc = parser.parseFromString(html, 'text/html');
+					var oobElement = doc.querySelector('[hx-swap-oob="true"]');
+					if (oobElement) {
+						var targetId = oobElement.id;
+						var existingCard = document.getElementById(targetId);
+						if (existingCard) {
+							existingCard.outerHTML = oobElement.outerHTML;
+						}
+					}
+				})
+				.catch(function() {
+					location.reload();
+				});
 		}
 	</script>
 }

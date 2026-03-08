@@ -748,8 +748,14 @@ func (h *Handler) HandleAssignSelf(c fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to get task")
 	}
 
-	// Return the updated assignee section for htmx swap
-	return render(c, components.AssigneeSection(taskWithDeps.ID, taskWithDeps.Assignees, orgID, projectID, *currentUser))
+	// Get task labels for the card update
+	taskLabels, err := h.store.GetTaskLabels(c.Context(), taskID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to get task labels")
+	}
+
+	// Return the updated assignee section and task card OOB
+	return render(c, views.AssigneeUpdateResponse(taskWithDeps.ID, taskWithDeps.Assignees, orgID, projectID, *currentUser, taskWithDeps.Task, taskLabels))
 }
 
 // HandleUnassign removes a user from a task.
@@ -808,8 +814,14 @@ func (h *Handler) HandleUnassign(c fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to get task")
 	}
 
-	// Return the updated assignee section for htmx swap
-	return render(c, components.AssigneeSection(taskWithDeps.ID, taskWithDeps.Assignees, orgID, projectID, *currentUser))
+	// Get task labels for the card update
+	taskLabels, err := h.store.GetTaskLabels(c.Context(), taskID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to get task labels")
+	}
+
+	// Return the updated assignee section and task card OOB
+	return render(c, views.AssigneeUpdateResponse(taskWithDeps.ID, taskWithDeps.Assignees, orgID, projectID, *currentUser, taskWithDeps.Task, taskLabels))
 }
 
 // HandleSearchUsers searches for users in an organization
@@ -902,8 +914,14 @@ func (h *Handler) HandleAssignUser(c fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to get task")
 	}
 
-	// Return the updated assignee section for htmx swap
-	return render(c, components.AssigneeSection(taskWithDeps.ID, taskWithDeps.Assignees, orgID, projectID, *currentUser))
+	// Get task labels for the card update
+	taskLabels, err := h.store.GetTaskLabels(c.Context(), taskID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to get task labels")
+	}
+
+	// Return the updated assignee section and task card OOB
+	return render(c, views.AssigneeUpdateResponse(taskWithDeps.ID, taskWithDeps.Assignees, orgID, projectID, *currentUser, taskWithDeps.Task, taskLabels))
 }
 
 // HandleAddMetadata adds a metadata key-value pair.

@@ -245,6 +245,17 @@ templ TaskFieldSectionUpdate(taskWithDeps model.TaskWithDependencies, orgID int6
 	@components.TaskCard(taskWithDeps.Task, labels, assignees, orgID, true)
 }
 
+// LabelTaskCardUpdate returns only the task card with OOB swap for label changes.
+templ LabelTaskCardUpdate(task model.Task, orgID int64, labels []model.Label, assignees []model.AssigneeInfo) {
+	@components.TaskCard(task, labels, assignees, orgID, true)
+}
+
+// AssigneeUpdateResponse returns the assignee section and task card OOB update.
+templ AssigneeUpdateResponse(taskID int64, assignees []model.AssigneeInfo, orgID int64, projectID int64, currentUser model.User, task model.Task, labels []model.Label) {
+	@components.AssigneeSection(taskID, assignees, orgID, projectID, currentUser)
+	@components.TaskCard(task, labels, assignees, orgID, true)
+}
+
 // ColumnUpdateResponse returns OOB updates for column badge and kanban columns (no full pane reload).
 templ ColumnUpdateResponse(taskWithDeps model.TaskWithDependencies, orgID int64, oldColumnID int64, tasksByColumn map[int64][]model.Task, tasksWithLabels map[int64][]model.Label, tasksWithAssignees map[int64][]model.AssigneeInfo, columns []model.ProjectColumn) {
 	<!-- Update column badge -->

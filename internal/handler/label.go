@@ -311,6 +311,11 @@ func (h *Handler) HandleDeleteLabel(c fiber.Ctx) error {
 // HandleAddLabelToTask adds a label to a task
 // POST /orgs/:org_id/projects/:project_id/tasks/:task_id/labels/:label_id
 func (h *Handler) HandleAddLabelToTask(c fiber.Ctx) error {
+	orgID, err := strconv.ParseInt(c.Params("org_id"), 10, 64)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "invalid org_id")
+	}
+
 	projectID, err := strconv.ParseInt(c.Params("project_id"), 10, 64)
 	if err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, "invalid project_id")
@@ -355,12 +360,31 @@ func (h *Handler) HandleAddLabelToTask(c fiber.Ctx) error {
 		_ = h.store.CreateActivity(c.Context(), taskID, userID, "add_label", "", nil, newValue)
 	}
 
-	return c.SendStatus(fiber.StatusNoContent)
+	// Get updated task with labels and assignees for kanban card update
+	task, err := h.store.GetTask(ctx, taskID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to get task")
+	}
+	taskLabels, err := h.store.GetTaskLabels(ctx, taskID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to get task labels")
+	}
+	taskAssignees, err := h.store.GetTaskAssignees(ctx, taskID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to get task assignees")
+	}
+
+	return render(c, views.LabelTaskCardUpdate(*task, orgID, taskLabels, taskAssignees))
 }
 
 // HandleRemoveLabelFromTask removes a label from a task
 // DELETE /orgs/:org_id/projects/:project_id/tasks/:task_id/labels/:label_id
 func (h *Handler) HandleRemoveLabelFromTask(c fiber.Ctx) error {
+	orgID, err := strconv.ParseInt(c.Params("org_id"), 10, 64)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "invalid org_id")
+	}
+
 	projectID, err := strconv.ParseInt(c.Params("project_id"), 10, 64)
 	if err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, "invalid project_id")
@@ -405,5 +429,19 @@ func (h *Handler) HandleRemoveLabelFromTask(c fiber.Ctx) error {
 		_ = h.store.CreateActivity(c.Context(), taskID, userID, "remove_label", "", oldValue, nil)
 	}
 
-	return c.SendStatus(fiber.StatusNoContent)
+	// Get updated task with labels and assignees for kanban card update
+	task, err := h.store.GetTask(ctx, taskID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to get task")
+	}
+	taskLabels, err := h.store.GetTaskLabels(ctx, taskID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to get task labels")
+	}
+	taskAssignees, err := h.store.GetTaskAssignees(ctx, taskID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to get task assignees")
+	}
+
+	return render(c, views.LabelTaskCardUpdate(*task, orgID, taskLabels, taskAssignees))
 }
