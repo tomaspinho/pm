@@ -42,20 +42,18 @@ templ AddTaskForm(columnID int64, orgID int64, projectID int64, labels []model.L
 				/>
 			</div>
 			if len(labels) > 0 {
-				<div class="space-y-1">
+				<div class="space-y-1" data-label-dropdown-container>
 					<label class="block text-xs font-medium text-gray-600">Labels</label>
 					<div class="flex flex-wrap gap-1" id={ fmt.Sprintf("selected-labels-%d", columnID) }></div>
 					<div class="relative">
 						<button
 							type="button"
-							class="text-xs text-indigo-600 hover:text-indigo-700 cursor-pointer"
-							onclick="this.nextElementSibling.classList.toggle('hidden')"
+							class="text-xs text-indigo-600 hover:text-indigo-700 cursor-pointer add-task-label-toggle"
 						>
 							+ Add label
 						</button>
 						<div
-							id={ fmt.Sprintf("label-dropdown-%d", columnID) }
-							class="hidden absolute z-50 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto min-w-[150px]"
+							class="hidden absolute z-50 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto min-w-[150px] add-task-label-dropdown"
 						>
 							for _, label := range labels {
 								<button
@@ -141,6 +139,32 @@ templ AddTaskForm(columnID int64, orgID int64, projectID int64, labels []model.L
 				btn.classList.add('bg-indigo-100');
 			}
 		}
+
+		(function() {
+			var labelContainers = document.querySelectorAll('[data-label-dropdown-container]');
+			labelContainers.forEach(function(container) {
+				var toggleBtn = container.querySelector('.add-task-label-toggle');
+				var dropdown = container.querySelector('.add-task-label-dropdown');
+
+				toggleBtn.addEventListener('click', function(e) {
+					var wasHidden = dropdown.classList.contains('hidden');
+					dropdown.classList.toggle('hidden');
+
+					if (wasHidden) {
+						function hideDropdown(event) {
+							if (!dropdown.contains(event.target) && !toggleBtn.contains(event.target)) {
+								dropdown.classList.add('hidden');
+								document.removeEventListener('click', hideDropdown);
+							}
+						}
+						e.stopPropagation();
+						setTimeout(function() {
+							document.addEventListener('click', hideDropdown);
+						}, 0);
+					}
+				});
+			});
+		})();
 
 		(function() {
 			var containers = document.querySelectorAll('[data-assignee-container]');
