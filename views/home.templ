@@ -213,8 +213,8 @@ templ DeleteTaskResponse(columnID int64, count int) {
 }
 
 // TaskDetailPane wraps the component for use in handlers.
-templ TaskDetailPane(taskWithDeps model.TaskWithDependencies, orgID int64, projectID int64, comments []model.CommentThread, currentUser *model.User, activity []model.TaskActivityRecord, labels []model.Label, allLabels []model.Label) {
-	@components.TaskDetailPane(taskWithDeps, orgID, projectID, comments, currentUser, activity, labels, allLabels)
+templ TaskDetailPane(taskWithDeps model.TaskWithDependencies, orgID int64, projectID int64, columns []model.ProjectColumn, comments []model.CommentThread, currentUser *model.User, activity []model.TaskActivityRecord, labels []model.Label, allLabels []model.Label) {
+	@components.TaskDetailPane(taskWithDeps, orgID, projectID, columns, comments, currentUser, activity, labels, allLabels)
 }
 
 // DependencySection wraps the component for use in handlers.
@@ -258,8 +258,8 @@ templ AssigneeUpdateResponse(taskID int64, assignees []model.AssigneeInfo, orgID
 
 // ColumnUpdateResponse returns OOB updates for column badge and kanban columns (no full pane reload).
 templ ColumnUpdateResponse(taskWithDeps model.TaskWithDependencies, orgID int64, oldColumnID int64, tasksByColumn map[int64][]model.Task, tasksWithLabels map[int64][]model.Label, tasksWithAssignees map[int64][]model.AssigneeInfo, columns []model.ProjectColumn) {
-	<!-- Update column badge -->
-	@components.ColumnBadge(taskWithDeps, orgID, columns)
+	<!-- Out-of-band: update column badge -->
+	@components.ColumnBadgeOOB(taskWithDeps, orgID, columns)
 	if oldColumnID != taskWithDeps.ColumnID {
 		<!-- Out-of-band: update old column task list -->
 		<div
@@ -348,6 +348,6 @@ templ BoardPageWithTask(project model.Project, columns []model.ProjectColumn, ta
 			<div id="kanban-data" style="display:none" data-org-id={ fmt.Sprintf("%d", project.OrganizationID) } data-project-id={ fmt.Sprintf("%d", project.ID) } data-task-id={ fmt.Sprintf("%d", taskWithDeps.ID) }></div>
 		}
 		<!-- Detail pane for pre-opened task -->
-		@TaskDetailPane(*taskWithDeps, nav.CurrentOrgID, project.ID, comments, user, activity, taskLabels, allLabels)
+		@TaskDetailPane(*taskWithDeps, nav.CurrentOrgID, project.ID, columns, comments, user, activity, taskLabels, allLabels)
 	}
 }

@@ -33,16 +33,19 @@ func (s *Store) RemoveDependency(ctx context.Context, taskID, dependsOnID int64)
 
 // GetTaskWithDependencies fetches a task with its full dependency information.
 func (s *Store) GetTaskWithDependencies(ctx context.Context, taskID int64) (*model.TaskWithDependencies, error) {
-	// First get the task itself with creator info
+	// First get the task itself with creator info and column info
 	var result model.TaskWithDependencies
 	err := s.db.GetContext(ctx, &result, `
 		SELECT t.id, t.project_id, t.title, t.description, t.created_by,
 			t.column_id, t.position, t.metadata, t.due_date,
 			t.created_at, t.updated_at, t.deleted_at,
 			u.display_name as created_by_name,
-			u.email as created_by_email
+			u.email as created_by_email,
+			pc.name as column_name,
+			pc.color as column_color
 		FROM tasks t
 		LEFT JOIN users u ON t.created_by = u.id
+		LEFT JOIN project_columns pc ON t.column_id = pc.id
 		WHERE t.id = $1 AND t.deleted_at IS NULL
 	`, taskID)
 	if err != nil {

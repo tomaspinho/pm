@@ -20,6 +20,8 @@ type TaskWithDependencies struct {
 	Assignees      []AssigneeInfo   `db:"-" json:"assignees"`     // Users assigned to this task
 	CreatedByName  string           `db:"created_by_name" json:"created_by_name"`
 	CreatedByEmail string           `db:"created_by_email" json:"created_by_email"`
+	ColumnName     string           `db:"column_name" json:"column_name"`   // Name of the current column
+	ColumnColor    string           `db:"column_color" json:"column_color"` // Color of the current column
 }
 
 // CreatorInitials returns the first two characters of the creator's display name.

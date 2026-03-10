@@ -315,7 +315,13 @@ func (h *Handler) HandleTaskDetail(c fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to load project labels")
 	}
 
-	return render(c, views.TaskDetailPane(*taskWithDeps, orgID, projectID, commentTree, user, activity, labels, allLabels))
+	// Load project columns for column dropdown
+	columns, err := h.store.GetProjectColumns(c.Context(), projectID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to load columns")
+	}
+
+	return render(c, views.TaskDetailPane(*taskWithDeps, orgID, projectID, columns, commentTree, user, activity, labels, allLabels))
 }
 
 // HandleGetTaskField returns a single field section for inline editing.
