@@ -79,9 +79,11 @@ func (s *Store) IsMember(ctx context.Context, orgID, userID int64) (bool, error)
 
 // AddMember adds a user to an organization.
 func (s *Store) AddMember(ctx context.Context, orgID, userID int64) error {
-	_, err := s.db.ExecContext(ctx,
-		`INSERT INTO organization_members (organization_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
-		orgID, userID)
+	_, err := s.db.ExecContext(ctx, `
+		INSERT INTO organization_members (organization_id, user_id) VALUES ($1, $2)
+		ON CONFLICT (organization_id, user_id) DO UPDATE
+			SET deleted_at = NULL, updated_at = NOW()
+	`, orgID, userID)
 	if err != nil {
 		return fmt.Errorf("adding member: %w", err)
 	}

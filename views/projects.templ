@@ -6,75 +6,82 @@ import (
 	"pm/internal/model"
 )
 
-templ ProjectPickerPage(user *model.User, orgs []model.Organization, currentOrg *model.Organization, projects []model.Project, nav NavContext) {
+templ ProjectPickerPage(orgs []model.Organization, currentOrg *model.Organization, projects []model.Project, nav NavContext) {
 	@AuthLayout("Projects", nav) {
-		<div class="space-y-6">
-			<div class="flex items-center justify-between">
-				<h1 class="text-2xl font-bold text-gray-900">Projects</h1>
-				if currentOrg != nil {
-					<a
-						href={ templ.SafeURL(fmt.Sprintf("/orgs/%d/projects/new", currentOrg.ID)) }
-						class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors"
-					>
-						New Project
-					</a>
-				}
-			</div>
-			<!-- Organization Picker -->
-			<div class="space-y-2">
-				<label class="block text-sm font-medium text-gray-700">Organization</label>
+		if currentOrg == nil {
+			<div class="space-y-6">
+				<h1 class="text-2xl font-bold text-gray-900">Select an Organization</h1>
 				<div class="flex gap-2 flex-wrap">
 					for _, org := range orgs {
-						if currentOrg != nil && org.ID == currentOrg.ID {
-							<a
-								href={ templ.SafeURL(fmt.Sprintf("/projects?org_id=%d", org.ID)) }
-								class="px-3 py-1.5 text-sm font-medium text-white bg-indigo-600 rounded-lg"
-							>
-								{ org.Name }
-							</a>
-						} else {
-							<a
-								href={ templ.SafeURL(fmt.Sprintf("/projects?org_id=%d", org.ID)) }
-								class="px-3 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-							>
-								{ org.Name }
-							</a>
-						}
-					}
-				</div>
-			</div>
-			<!-- Project List -->
-			if currentOrg == nil {
-				<div class="bg-gray-50 border border-gray-200 rounded-lg p-6 text-center">
-					<p class="text-gray-500">Select an organization above to view its projects.</p>
-				</div>
-			} else if len(projects) == 0 {
-				<div class="bg-gray-50 border border-gray-200 rounded-lg p-6 text-center space-y-2">
-					<p class="text-gray-500">No projects yet in { currentOrg.Name }.</p>
-					<a
-						href={ templ.SafeURL(fmt.Sprintf("/orgs/%d/projects/new", currentOrg.ID)) }
-						class="inline-block px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors"
-					>
-						Create your first project
-					</a>
-				</div>
-			} else {
-				<div class="bg-white border border-gray-200 rounded-lg divide-y divide-gray-200">
-					for _, project := range projects {
 						<a
-							href={ templ.SafeURL(fmt.Sprintf("/orgs/%d/projects/%d", currentOrg.ID, project.ID)) }
-							class="block px-4 py-3 hover:bg-gray-50 transition-colors"
+							href={ templ.SafeURL(fmt.Sprintf("/projects?org_id=%d", org.ID)) }
+							class="px-4 py-3 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
 						>
-							<p class="text-sm font-medium text-gray-900">{ project.Name }</p>
-							if project.Description != "" {
-								<p class="text-xs text-gray-500 mt-0.5">{ project.Description }</p>
-							}
+							{ org.Name }
 						</a>
 					}
 				</div>
-			}
-		</div>
+			</div>
+		} else {
+			<div class="space-y-6">
+				<div class="flex items-start justify-between">
+					<div>
+						<h1 class="text-2xl font-bold text-gray-900">{ currentOrg.Name }</h1>
+						<p class="text-sm text-gray-500 mt-1">{ fmt.Sprintf("%d project%s", len(projects), ternary(len(projects) == 1, "", "s")) }</p>
+					</div>
+					<div class="flex items-center gap-2">
+						<a
+							href={ templ.SafeURL(fmt.Sprintf("/orgs/%d/members", currentOrg.ID)) }
+							class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+						>
+							Manage members
+						</a>
+						<a
+							href={ templ.SafeURL(fmt.Sprintf("/orgs/%d/projects/new", currentOrg.ID)) }
+							class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors"
+						>
+							New Project
+						</a>
+					</div>
+				</div>
+				if len(projects) == 0 {
+					<div class="bg-gray-50 border border-gray-200 rounded-lg p-8 text-center">
+						<p class="text-gray-500 mb-4">No projects yet. Create your first project to get started.</p>
+						<a
+							href={ templ.SafeURL(fmt.Sprintf("/orgs/%d/projects/new", currentOrg.ID)) }
+							class="inline-block px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors"
+						>
+							Create Project
+						</a>
+					</div>
+				} else {
+					<div>
+						<h2 class="text-lg font-semibold text-gray-900 mb-3">Projects</h2>
+						<div class="bg-white border border-gray-200 rounded-lg divide-y divide-gray-200">
+							for _, project := range projects {
+								<a
+									href={ templ.SafeURL(fmt.Sprintf("/orgs/%d/projects/%d", currentOrg.ID, project.ID)) }
+									class="block px-4 py-3 hover:bg-gray-50 transition-colors"
+								>
+									<p class="text-sm font-medium text-gray-900">{ project.Name }</p>
+									if project.Description != "" {
+										<p class="text-xs text-gray-500 mt-0.5">{ project.Description }</p>
+									}
+								</a>
+							}
+						</div>
+					</div>
+				}
+			</div>
+		}
 	}
+}
+
+func ternary(cond bool, ifTrue string, ifFalse string) string {
+	if cond {
+		return ifTrue
+	}
+	return ifFalse
 }
 
 templ NewProjectPage(orgID int64, nav NavContext) {

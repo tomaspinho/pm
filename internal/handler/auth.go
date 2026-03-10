@@ -130,6 +130,16 @@ func (h *Handler) HandleSignup(c fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to create organization")
 	}
 
+	// Process any pending invitations for this email.
+	invitations, err := h.store.GetPendingInvitationsByEmail(c.Context(), email)
+	if err == nil {
+		for _, inv := range invitations {
+			if err := h.store.AddMember(c.Context(), inv.OrgID, user.ID); err == nil {
+				_ = h.store.AcceptInvitation(c.Context(), inv.ID)
+			}
+		}
+	}
+
 	// Create session and log user in.
 	sessionID, err := auth.GenerateSessionID()
 	if err != nil {

@@ -98,7 +98,10 @@ func main() {
 	org := authed.Group("/orgs/:org_id", middleware.RequireOrgAccess(s))
 
 	// Organization member listing.
-	org.Get("/members", h.HandleGetOrgMembers)
+	org.Get("/members", h.HandleShowMembers)
+	org.Post("/members/invite", h.HandleInviteMember)
+	org.Post("/members/:user_id/remove", h.HandleRemoveMember)
+	org.Post("/invitations/:invitation_id/cancel", h.HandleCancelInvitation)
 
 	// Global search (org-wide).
 	org.Get("/search", h.HandleGlobalSearchResults)

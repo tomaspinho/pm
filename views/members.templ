@@ -1,0 +1,213 @@
+package views
+
+import (
+	"fmt"
+	"time"
+
+	"pm/internal/model"
+)
+
+type MemberWithRole struct {
+	model.User
+	IsOwner bool
+}
+
+type InvitationWithOrg struct {
+	ID        int64
+	OrgID     int64
+	OrgName   string
+	Email     string
+	InvitedBy string
+	CreatedAt time.Time
+}
+
+templ MembersPage(org *model.Organization, members []MemberWithRole, invitations []InvitationWithOrg, currentUserID int64, nav NavContext) {
+	@AuthLayout("Members", nav) {
+		<div class="flex justify-center py-8">
+			<div class="w-full max-w-3xl">
+				<div class="bg-white rounded-lg shadow-sm border border-gray-200">
+					<div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+						<div>
+							<h1 class="text-xl font-semibold text-gray-900">Members</h1>
+							<p class="text-sm text-gray-500">{ org.Name }</p>
+						</div>
+						<button
+							type="button"
+							id="invite-btn"
+							class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors cursor-pointer"
+						>
+							Invite Member
+						</button>
+					</div>
+
+					if len(invitations) > 0 {
+						<div class="px-6 py-3 bg-yellow-50 border-b border-yellow-100">
+							<p class="text-sm font-medium text-yellow-800 mb-2">Pending Invitations</p>
+							<div class="space-y-2">
+								for _, inv := range invitations {
+									<div class="flex items-center justify-between bg-white rounded px-3 py-2 border border-yellow-200">
+										<div>
+											<p class="text-sm font-medium text-gray-900">{ inv.Email }</p>
+											<p class="text-xs text-gray-500">Invited by { inv.InvitedBy } • { formatTimeAgo(inv.CreatedAt) }</p>
+										</div>
+										<form method="POST" action={ templ.SafeURL(fmt.Sprintf("/orgs/%d/invitations/%d/cancel", org.ID, inv.ID)) }>
+											<button
+												type="submit"
+												class="text-sm text-red-600 hover:text-red-700 cursor-pointer"
+											>
+												Cancel
+											</button>
+										</form>
+									</div>
+								}
+							</div>
+						</div>
+					}
+
+					<div class="divide-y divide-gray-200">
+						for _, member := range members {
+							<div class="px-6 py-4 flex items-center justify-between">
+								<div class="flex items-center gap-3">
+									<div
+										class="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-medium"
+										style={ fmt.Sprintf("background-color: %s", member.AvatarColor()) }
+									>
+										{ member.Initials() }
+									</div>
+									<div>
+										<p class="text-sm font-medium text-gray-900">
+											{ member.DisplayName }
+											if member.IsOwner {
+												<span class="ml-2 px-2 py-0.5 text-xs font-medium bg-indigo-100 text-indigo-700 rounded">Owner</span>
+											}
+										</p>
+										<p class="text-xs text-gray-500">{ member.Email }</p>
+									</div>
+								</div>
+								if !member.IsOwner {
+									<form method="POST" action={ templ.SafeURL(fmt.Sprintf("/orgs/%d/members/%d/remove", org.ID, member.ID)) }>
+										<button
+											type="submit"
+											class="text-sm text-red-600 hover:text-red-700 cursor-pointer"
+										>
+											if member.ID == currentUserID {
+												Leave
+											} else {
+												Remove
+											}
+										</button>
+									</form>
+								}
+							</div>
+						}
+					</div>
+				</div>
+			</div>
+		</div>
+		@inviteModal(org.ID)
+	}
+}
+
+templ inviteModal(orgID int64) {
+	<div id="invite-modal" class="hidden fixed inset-0 bg-gray-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+		<div class="bg-white rounded-lg shadow-xl max-w-md w-full p-6 space-y-4">
+			<div class="flex items-center justify-between">
+				<h3 class="text-lg font-semibold text-gray-900">Invite Member</h3>
+				<button type="button" id="close-invite-modal" class="text-gray-400 hover:text-gray-600 cursor-pointer">
+					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+					</svg>
+				</button>
+			</div>
+			<form method="POST" action={ templ.SafeURL(fmt.Sprintf("/orgs/%d/members/invite", orgID)) } class="space-y-4">
+				<div class="space-y-1">
+					<label for="email" class="block text-sm font-medium text-gray-700">Email Address</label>
+					<input
+						type="email"
+						id="email"
+						name="email"
+						required
+						autofocus
+						placeholder="user@example.com"
+						class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+					/>
+				</div>
+				<p class="text-xs text-gray-500">If the user already has an account, they'll be added immediately. Otherwise, they'll receive an invitation when they sign up.</p>
+				<div class="flex gap-2 justify-end">
+					<button
+						type="button"
+						id="cancel-invite"
+						class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors cursor-pointer"
+					>
+						Cancel
+					</button>
+					<button
+						type="submit"
+						class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors cursor-pointer"
+					>
+						Send Invitation
+					</button>
+				</div>
+			</form>
+		</div>
+	</div>
+	<script>
+	(function() {
+		var inviteBtn = document.getElementById('invite-btn');
+		var modal = document.getElementById('invite-modal');
+		var closeBtn = document.getElementById('close-invite-modal');
+		var cancelBtn = document.getElementById('cancel-invite');
+
+		function openModal() {
+			modal.classList.remove('hidden');
+			document.getElementById('email').focus();
+		}
+
+		function closeModal() {
+			modal.classList.add('hidden');
+		}
+
+		inviteBtn.addEventListener('click', openModal);
+		closeBtn.addEventListener('click', closeModal);
+		cancelBtn.addEventListener('click', closeModal);
+
+		modal.addEventListener('click', function(e) {
+			if (e.target === modal) {
+				closeModal();
+			}
+		});
+
+		document.addEventListener('keydown', function(e) {
+			if (e.key === 'Escape' && !modal.classList.contains('hidden')) {
+				closeModal();
+			}
+		});
+	})();
+	</script>
+}
+
+func formatTimeAgo(t time.Time) string {
+	d := time.Since(t)
+	if d < time.Minute {
+		return "just now"
+	}
+	if d < time.Hour {
+		mins := int(d.Minutes())
+		if mins == 1 {
+			return "1 minute ago"
+		}
+		return fmt.Sprintf("%d minutes ago", mins)
+	}
+	if d < 24*time.Hour {
+		hours := int(d.Hours())
+		if hours == 1 {
+			return "1 hour ago"
+		}
+		return fmt.Sprintf("%d hours ago", hours)
+	}
+	days := int(d.Hours() / 24)
+	if days == 1 {
+		return "1 day ago"
+	}
+	return fmt.Sprintf("%d days ago", days)
+}

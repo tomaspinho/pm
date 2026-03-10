@@ -61,7 +61,7 @@ func (h *Handler) HandleProjectPicker(c fiber.Ctx) error {
 			CurrentOrgID:     0,
 			CurrentProjectID: 0,
 		}
-		return render(c, views.ProjectPickerPage(user, orgs, nil, nil, nav))
+		return render(c, views.ProjectPickerPage(orgs, nil, nil, nav))
 	}
 
 	orgID, err := strconv.ParseInt(orgIDStr, 10, 64)
@@ -96,7 +96,7 @@ func (h *Handler) HandleProjectPicker(c fiber.Ctx) error {
 		CurrentProjectID: 0,
 	}
 
-	return render(c, views.ProjectPickerPage(user, orgs, currentOrg, projects, nav))
+	return render(c, views.ProjectPickerPage(orgs, currentOrg, projects, nav))
 }
 
 // HandleShowCreateProject renders the new project form.
