@@ -33,6 +33,12 @@ A modern, open-source kanban board for project management. Built with Go, htmx, 
 - **Rich descriptions** and editing capabilities
 - **Author tracking** for task ownership
 
+### 🏷️ Labels
+- **Project-level labels** with customizable colors
+- **Task categorization** with multiple labels per task
+- **Visual indicators** in task cards and detail pane
+- **Label management** in project settings (create, edit, delete)
+
 ### 🔍 Search & Discovery
 - **Task search** across titles and descriptions
 - **User search** for finding team members
@@ -56,6 +62,7 @@ A modern, open-source kanban board for project management. Built with Go, htmx, 
 | **Templates** | templ |
 | **CSS** | TailwindCSS v4 |
 | **Frontend Interactivity** | htmx 2.x |
+| **Drag-and-Drop** | Sortable.js 1.15 |
 
 ## Quick Start
 
@@ -167,6 +174,7 @@ mise run lint:fix
 mise run db:up       # Apply pending migrations
 mise run db:down     # Rollback last migration
 mise run db:status   # Show migration status
+mise run db:seed     # Load seed data
 ```
 
 ## License
