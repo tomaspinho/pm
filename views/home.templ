@@ -241,6 +241,8 @@ templ TaskFieldSectionUpdate(taskWithDeps model.TaskWithDependencies, orgID int6
 		@components.DescriptionSection(taskWithDeps, orgID, false)
 	case "due_date":
 		@components.DueDateSection(taskWithDeps, orgID, false)
+	case "priority":
+		@components.PrioritySection(taskWithDeps, orgID, false)
 	}
 	@components.TaskCard(taskWithDeps.Task, labels, assignees, orgID, true)
 }

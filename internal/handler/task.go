@@ -171,12 +171,17 @@ func (h *Handler) HandleCreateTask(c fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
 
+	priority, err := strconv.Atoi(c.FormValue("priority"))
+	if err != nil || priority < 0 || priority > 3 {
+		priority = model.PriorityMedium
+	}
+
 	user, err := middleware.GetCurrentUser(c)
 	if err != nil {
 		return fiber.NewError(fiber.StatusUnauthorized, "user not authenticated")
 	}
 
-	task, err := h.store.CreateTask(c.Context(), projectID, title, description, columnID, user.ID, dueDate)
+	task, err := h.store.CreateTask(c.Context(), projectID, title, description, columnID, user.ID, dueDate, priority)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to create task")
 	}
@@ -352,6 +357,8 @@ func (h *Handler) HandleGetTaskField(c fiber.Ctx) error {
 		return render(c, components.DescriptionSection(*taskWithDeps, orgID, edit))
 	case "due_date":
 		return render(c, components.DueDateSection(*taskWithDeps, orgID, edit))
+	case "priority":
+		return render(c, components.PrioritySection(*taskWithDeps, orgID, edit))
 	default:
 		return fiber.NewError(fiber.StatusBadRequest, "invalid field")
 	}
@@ -448,6 +455,14 @@ func (h *Handler) handleFieldUpdate(c fiber.Ctx, orgID, taskID int64, field stri
 			newValue = dueDate.Format("2006-01-02")
 		}
 		err = h.store.UpdateTaskField(c.Context(), taskID, "due_date", dueDate)
+	case "priority":
+		priority, parseErr := strconv.Atoi(c.FormValue("priority"))
+		if parseErr != nil || priority < 0 || priority > 3 {
+			return fiber.NewError(fiber.StatusBadRequest, "invalid priority value")
+		}
+		oldValue = model.PriorityLabel(currentTask.Priority)
+		newValue = model.PriorityLabel(priority)
+		err = h.store.UpdateTaskField(c.Context(), taskID, "priority", priority)
 	default:
 		return fiber.NewError(fiber.StatusBadRequest, "invalid field")
 	}

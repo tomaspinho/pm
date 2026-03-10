@@ -41,6 +41,18 @@ templ AddTaskForm(columnID int64, orgID int64, projectID int64, labels []model.L
 					class="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
 				/>
 			</div>
+			<div class="space-y-1">
+				<label class="block text-xs font-medium text-gray-600">Priority</label>
+				<select
+					name="priority"
+					class="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+				>
+					<option value="0">Urgent</option>
+					<option value="1">High</option>
+					<option value="2" selected>Medium</option>
+					<option value="3">Low</option>
+				</select>
+			</div>
 			if len(labels) > 0 {
 				<div class="space-y-1" data-label-dropdown-container>
 					<label class="block text-xs font-medium text-gray-600">Labels</label>

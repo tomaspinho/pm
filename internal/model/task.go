@@ -5,6 +5,58 @@ import (
 	"time"
 )
 
+const (
+	PriorityUrgent int = 0
+	PriorityHigh   int = 1
+	PriorityMedium int = 2
+	PriorityLow    int = 3
+)
+
+func PriorityLabel(p int) string {
+	switch p {
+	case PriorityUrgent:
+		return "Urgent"
+	case PriorityHigh:
+		return "High"
+	case PriorityMedium:
+		return "Medium"
+	case PriorityLow:
+		return "Low"
+	default:
+		return "Medium"
+	}
+}
+
+func PriorityColor(p int) string {
+	switch p {
+	case PriorityUrgent:
+		return "bg-red-100 text-red-700 border-red-300"
+	case PriorityHigh:
+		return "bg-orange-100 text-orange-700 border-orange-300"
+	case PriorityMedium:
+		return "bg-yellow-100 text-yellow-700 border-yellow-300"
+	case PriorityLow:
+		return "bg-gray-100 text-gray-600 border-gray-300"
+	default:
+		return "bg-yellow-100 text-yellow-700 border-yellow-300"
+	}
+}
+
+func PriorityDotColor(p int) string {
+	switch p {
+	case PriorityUrgent:
+		return "bg-red-500"
+	case PriorityHigh:
+		return "bg-orange-500"
+	case PriorityMedium:
+		return "bg-yellow-500"
+	case PriorityLow:
+		return "bg-gray-400"
+	default:
+		return "bg-yellow-500"
+	}
+}
+
 // Task represents a kanban card belonging to a project.
 type Task struct {
 	ID          int64        `db:"id"          json:"id"`
@@ -14,6 +66,7 @@ type Task struct {
 	CreatedBy   *int64       `db:"created_by"  json:"created_by,omitempty"`
 	ColumnID    int64        `db:"column_id"   json:"column_id"`
 	Position    int          `db:"position"    json:"position"`
+	Priority    int          `db:"priority"    json:"priority"`
 	Metadata    TaskMetadata `db:"metadata"    json:"metadata"`
 	DueDate     *time.Time   `db:"due_date"    json:"due_date,omitempty"`
 	CreatedAt   time.Time    `db:"created_at"  json:"created_at"`

@@ -163,6 +163,12 @@ templ TaskDetailPane(taskWithDeps model.TaskWithDependencies, orgID int64, proje
 						@DueDateField(taskWithDeps, orgID, false)
 					</div>
 				</div>
+				<div class="space-y-2">
+					<label class="block text-xs font-medium text-gray-500 uppercase tracking-wide">Priority</label>
+					<div id={ "priority-section-" + fmt.Sprintf("%d", taskWithDeps.ID) }>
+						@PriorityField(taskWithDeps, orgID, false)
+					</div>
+				</div>
 				<!-- Dependencies Section -->
 				<!-- Activity Feed Section -->
 				<div id={ "activity-section-" + fmt.Sprintf("%d", taskWithDeps.ID) } class="space-y-4 border-t border-gray-200 pt-6">
@@ -880,6 +886,73 @@ templ DescriptionSection(taskWithDeps model.TaskWithDependencies, orgID int64, i
 templ DueDateSection(taskWithDeps model.TaskWithDependencies, orgID int64, isEditing bool) {
 	<div id={ "duedate-section-" + fmt.Sprintf("%d", taskWithDeps.ID) }>
 		@DueDateField(taskWithDeps, orgID, isEditing)
+	</div>
+}
+
+templ PriorityField(taskWithDeps model.TaskWithDependencies, orgID int64, isEditing bool) {
+	if isEditing {
+		<div>
+			<form
+				hx-patch={ taskURLPrefix(orgID, taskWithDeps.ProjectID) + "/" + fmt.Sprintf("%d", taskWithDeps.ID) }
+				hx-target={ "#priority-section-" + fmt.Sprintf("%d", taskWithDeps.ID) }
+				hx-swap="outerHTML"
+			>
+				<input type="hidden" name="field" value="priority"/>
+				<select
+					name="priority"
+					class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+				>
+					<option value="0" if taskWithDeps.Priority == model.PriorityUrgent { selected }>{ model.PriorityLabel(model.PriorityUrgent) }</option>
+					<option value="1" if taskWithDeps.Priority == model.PriorityHigh { selected }>{ model.PriorityLabel(model.PriorityHigh) }</option>
+					<option value="2" if taskWithDeps.Priority == model.PriorityMedium { selected }>{ model.PriorityLabel(model.PriorityMedium) }</option>
+					<option value="3" if taskWithDeps.Priority == model.PriorityLow { selected }>{ model.PriorityLabel(model.PriorityLow) }</option>
+				</select>
+				<div class="flex gap-2 mt-2">
+					<button type="submit" class="px-3 py-1.5 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 cursor-pointer">
+						Save
+					</button>
+					<button
+						type="button"
+						class="px-3 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 cursor-pointer"
+						hx-get={ taskURLPrefix(orgID, taskWithDeps.ProjectID) + "/" + fmt.Sprintf("%d", taskWithDeps.ID) + "/field?field=priority" }
+						hx-target={ "#priority-section-" + fmt.Sprintf("%d", taskWithDeps.ID) }
+						hx-swap="outerHTML"
+					>
+						Cancel
+					</button>
+				</div>
+			</form>
+		</div>
+	} else {
+		<div class="editable-field group">
+			<div class="flex items-center gap-2">
+				<p
+					class={ "flex-1 cursor-pointer px-3 py-2 rounded-lg border text-sm", model.PriorityColor(taskWithDeps.Priority) }
+					hx-get={ taskURLPrefix(orgID, taskWithDeps.ProjectID) + "/" + fmt.Sprintf("%d", taskWithDeps.ID) + "/field?field=priority&edit=true" }
+					hx-target={ "#priority-section-" + fmt.Sprintf("%d", taskWithDeps.ID) }
+					hx-swap="outerHTML"
+				>
+					{ model.PriorityLabel(taskWithDeps.Priority) }
+				</p>
+				<button
+					type="button"
+					class="edit-btn opacity-0 group-hover:opacity-100 transition-opacity text-gray-400"
+					hx-get={ taskURLPrefix(orgID, taskWithDeps.ProjectID) + "/" + fmt.Sprintf("%d", taskWithDeps.ID) + "/field?field=priority&edit=true" }
+					hx-target={ "#priority-section-" + fmt.Sprintf("%d", taskWithDeps.ID) }
+					hx-swap="outerHTML"
+				>
+					<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+					</svg>
+				</button>
+			</div>
+		</div>
+	}
+}
+
+templ PrioritySection(taskWithDeps model.TaskWithDependencies, orgID int64, isEditing bool) {
+	<div id={ "priority-section-" + fmt.Sprintf("%d", taskWithDeps.ID) }>
+		@PriorityField(taskWithDeps, orgID, isEditing)
 	</div>
 }
 

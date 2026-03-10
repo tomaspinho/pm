@@ -45,7 +45,10 @@ templ TaskCard(task model.Task, labels []model.Label, assignees []model.Assignee
 	>
 		<div class="flex items-start gap-2">
 			<div class="flex-1 min-w-0 cursor-pointer task-card-content">
-				<p class="text-sm font-medium text-gray-900 truncate">{ task.Title }</p>
+				<div class="flex items-center gap-2 mb-1">
+					<span class={ "w-2 h-2 rounded-full flex-shrink-0", model.PriorityDotColor(task.Priority) } title={ model.PriorityLabel(task.Priority) }></span>
+					<p class="text-sm font-medium text-gray-900 truncate">{ task.Title }</p>
+				</div>
 				if task.Description != "" {
 					<p class="text-xs text-gray-500 mt-1 line-clamp-2">{ task.Description }</p>
 				}

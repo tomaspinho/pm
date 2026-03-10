@@ -29,7 +29,7 @@ func normalizeQuery(query string) string {
 func (s *Store) ListTasksByProject(ctx context.Context, projectID int64) ([]model.Task, error) {
 	var tasks []model.Task
 	err := s.db.SelectContext(ctx, &tasks,
-		"SELECT * FROM tasks WHERE project_id = $1 AND deleted_at IS NULL ORDER BY position, id",
+		"SELECT * FROM tasks WHERE project_id = $1 AND deleted_at IS NULL ORDER BY priority, position, id",
 		projectID,
 	)
 	if err != nil {
@@ -121,7 +121,7 @@ func (s *Store) MoveTask(ctx context.Context, taskID int64, newColumnID int64, n
 }
 
 // CreateTask inserts a new task at the end of a column.
-func (s *Store) CreateTask(ctx context.Context, projectID int64, title, description string, columnID int64, createdBy int64, dueDate *time.Time) (model.Task, error) {
+func (s *Store) CreateTask(ctx context.Context, projectID int64, title, description string, columnID int64, createdBy int64, dueDate *time.Time, priority int) (model.Task, error) {
 	var task model.Task
 
 	// Get max position in the column
@@ -135,8 +135,8 @@ func (s *Store) CreateTask(ctx context.Context, projectID int64, title, descript
 
 	// Insert at max + 1
 	err = s.db.GetContext(ctx, &task,
-		"INSERT INTO tasks (project_id, title, description, column_id, position, created_by, due_date) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *",
-		projectID, title, description, columnID, maxPos+1, createdBy, dueDate)
+		"INSERT INTO tasks (project_id, title, description, column_id, position, created_by, due_date, priority) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *",
+		projectID, title, description, columnID, maxPos+1, createdBy, dueDate, priority)
 	if err != nil {
 		return task, fmt.Errorf("creating task: %w", err)
 	}
@@ -215,6 +215,8 @@ func (s *Store) UpdateTaskField(ctx context.Context, taskID int64, field string,
 		query = `UPDATE tasks SET description = $1, updated_at = NOW() WHERE id = $2 AND deleted_at IS NULL`
 	case "due_date":
 		query = `UPDATE tasks SET due_date = $1, updated_at = NOW() WHERE id = $2 AND deleted_at IS NULL`
+	case "priority":
+		query = `UPDATE tasks SET priority = $1, updated_at = NOW() WHERE id = $2 AND deleted_at IS NULL`
 	default:
 		return fmt.Errorf("unknown field: %s", field)
 	}
