@@ -37,7 +37,7 @@ func (s *Store) GetTaskWithDependencies(ctx context.Context, taskID int64) (*mod
 	var result model.TaskWithDependencies
 	err := s.db.GetContext(ctx, &result, `
 		SELECT t.id, t.project_id, t.title, t.description, t.created_by,
-			t.column_id, t.position, t.metadata, t.due_date,
+			t.column_id, t.position, t.priority, t.metadata, t.due_date,
 			t.created_at, t.updated_at, t.deleted_at,
 			u.display_name as created_by_name,
 			u.email as created_by_email,
@@ -56,7 +56,7 @@ func (s *Store) GetTaskWithDependencies(ctx context.Context, taskID int64) (*mod
 	err = s.db.SelectContext(ctx, &result.BlockedBy, `
 		SELECT
 			t.id, t.project_id, t.title, t.description, t.created_by,
-			t.column_id, t.position, t.metadata, t.due_date,
+			t.column_id, t.position, t.priority, t.metadata, t.due_date,
 			t.created_at, t.updated_at, t.deleted_at,
 			pc.name as column_name,
 			pc.color as column_color
@@ -76,7 +76,7 @@ func (s *Store) GetTaskWithDependencies(ctx context.Context, taskID int64) (*mod
 	err = s.db.SelectContext(ctx, &result.Blocking, `
 		SELECT
 			t.id, t.project_id, t.title, t.description, t.created_by,
-			t.column_id, t.position, t.metadata, t.due_date,
+			t.column_id, t.position, t.priority, t.metadata, t.due_date,
 			t.created_at, t.updated_at, t.deleted_at,
 			pc.name as column_name,
 			pc.color as column_color
