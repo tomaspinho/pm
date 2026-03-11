@@ -33,6 +33,26 @@ templ ActivityMessage(action string, fieldName string, oldValue interface{}, new
 			} else {
 				<span>Unassigned user</span>
 			}
+		case "add_label":
+			if val, ok := newValue.(map[string]interface{}); ok {
+				if name, ok := val["label_name"].(string); ok {
+					<span>Added label <span class="font-bold">{ name }</span></span>
+				} else {
+					<span>Added label</span>
+				}
+			} else {
+				<span>Added label</span>
+			}
+		case "remove_label":
+			if val, ok := oldValue.(map[string]interface{}); ok {
+				if name, ok := val["label_name"].(string); ok {
+					<span>Removed label <span class="font-bold">{ name }</span></span>
+				} else {
+					<span>Removed label</span>
+				}
+			} else {
+				<span>Removed label</span>
+			}
 		case "move":
 			if fieldName == "column_id" {
 				if oldV, ok := oldValue.(string); ok {
