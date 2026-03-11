@@ -374,7 +374,13 @@ func (h *Handler) HandleAddLabelToTask(c fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to get task assignees")
 	}
 
-	return render(c, views.LabelTaskCardUpdate(*task, orgID, taskLabels, taskAssignees))
+	// Get activity for OOB update
+	activity, err := h.store.GetTaskActivity(ctx, taskID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to get activity")
+	}
+
+	return render(c, views.LabelTaskCardUpdateWithActivity(*task, orgID, taskLabels, taskAssignees, activity))
 }
 
 // HandleRemoveLabelFromTask removes a label from a task
@@ -443,5 +449,11 @@ func (h *Handler) HandleRemoveLabelFromTask(c fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to get task assignees")
 	}
 
-	return render(c, views.LabelTaskCardUpdate(*task, orgID, taskLabels, taskAssignees))
+	// Get activity for OOB update
+	activity, err := h.store.GetTaskActivity(ctx, taskID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to get activity")
+	}
+
+	return render(c, views.LabelTaskCardUpdateWithActivity(*task, orgID, taskLabels, taskAssignees, activity))
 }

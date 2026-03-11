@@ -133,22 +133,22 @@ templ LabelSection(taskID int64, labels []model.Label, allLabels []model.Label, 
 				})
 				.then(function(html) {
 					if (!html) return;
-					// Parse response and update kanban card via OOB swap
+					// Parse response and update all OOB elements
 					var parser = new DOMParser();
 					var doc = parser.parseFromString(html, 'text/html');
-					var oobElement = doc.querySelector('[hx-swap-oob="true"]');
-					if (oobElement) {
+					var oobElements = doc.querySelectorAll('[hx-swap-oob="true"]');
+					oobElements.forEach(function(oobElement) {
 						var targetId = oobElement.id;
-						var existingCard = document.getElementById(targetId);
-						if (existingCard) {
-							existingCard.outerHTML = oobElement.outerHTML;
-							// Re-init Sortable on the new card if needed
-							if (window.Sortable) {
-								var parentCol = document.querySelector('[data-column-id]');
-								if (parentCol && parentCol.sortableInstance) {
-									parentCol.sortableInstance.option('group', 'kanban');
-								}
-							}
+						var existingElement = document.getElementById(targetId);
+						if (existingElement) {
+							existingElement.outerHTML = oobElement.outerHTML;
+						}
+					});
+					// Re-init Sortable on the new card if needed
+					if (window.Sortable) {
+						var parentCol = document.querySelector('[data-column-id]');
+						if (parentCol && parentCol.sortableInstance) {
+							parentCol.sortableInstance.option('group', 'kanban');
 						}
 					}
 				})
@@ -192,17 +192,17 @@ templ LabelSection(taskID int64, labels []model.Label, allLabels []model.Label, 
 				})
 				.then(function(html) {
 					if (!html) return;
-					// Parse response and update kanban card via OOB swap
+					// Parse response and update all OOB elements
 					var parser = new DOMParser();
 					var doc = parser.parseFromString(html, 'text/html');
-					var oobElement = doc.querySelector('[hx-swap-oob="true"]');
-					if (oobElement) {
+					var oobElements = doc.querySelectorAll('[hx-swap-oob="true"]');
+					oobElements.forEach(function(oobElement) {
 						var targetId = oobElement.id;
-						var existingCard = document.getElementById(targetId);
-						if (existingCard) {
-							existingCard.outerHTML = oobElement.outerHTML;
+						var existingElement = document.getElementById(targetId);
+						if (existingElement) {
+							existingElement.outerHTML = oobElement.outerHTML;
 						}
-					}
+					});
 				})
 				.catch(function() {
 					location.reload();

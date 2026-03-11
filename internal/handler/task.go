@@ -491,7 +491,12 @@ func (h *Handler) handleFieldUpdate(c fiber.Ctx, orgID, taskID int64, field stri
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to load assignees")
 	}
 
-	return render(c, views.TaskFieldSectionUpdate(*taskWithDeps, orgID, taskLabels, taskAssignees, field))
+	activity, err := h.store.GetTaskActivity(c.Context(), taskID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to load activity")
+	}
+
+	return render(c, views.TaskFieldUpdateWithActivityResponse(*taskWithDeps, orgID, taskLabels, taskAssignees, field, activity))
 }
 
 func (h *Handler) logFieldChanges(c fiber.Ctx, currentTask *model.Task, title, description string, dueDate *time.Time) {
@@ -554,7 +559,12 @@ func (h *Handler) HandleAddDependency(c fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to reload task")
 	}
 
-	return render(c, views.DependencySection(*taskWithDeps, orgID))
+	activity, err := h.store.GetTaskActivity(c.Context(), taskID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to load activity")
+	}
+
+	return render(c, views.DependencySectionWithActivity(*taskWithDeps, orgID, activity))
 }
 
 // HandleRemoveDependency removes a dependency from a task.
@@ -597,7 +607,12 @@ func (h *Handler) HandleRemoveDependency(c fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to reload task")
 	}
 
-	return render(c, views.DependencySection(*taskWithDeps, orgID))
+	activity, err := h.store.GetTaskActivity(c.Context(), taskID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to load activity")
+	}
+
+	return render(c, views.DependencySectionWithActivity(*taskWithDeps, orgID, activity))
 }
 
 // HandleSearchTasks searches for tasks across the organization
@@ -775,8 +790,14 @@ func (h *Handler) HandleAssignSelf(c fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to get task labels")
 	}
 
+	// Get activity for OOB update
+	activity, err := h.store.GetTaskActivity(c.Context(), taskID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to get activity")
+	}
+
 	// Return the updated assignee section and task card OOB
-	return render(c, views.AssigneeUpdateResponse(taskWithDeps.ID, taskWithDeps.Assignees, orgID, projectID, *currentUser, taskWithDeps.Task, taskLabels))
+	return render(c, views.AssigneeUpdateResponseWithActivity(taskWithDeps.ID, taskWithDeps.Assignees, orgID, projectID, *currentUser, taskWithDeps.Task, taskLabels, activity))
 }
 
 // HandleUnassign removes a user from a task.
@@ -841,8 +862,14 @@ func (h *Handler) HandleUnassign(c fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to get task labels")
 	}
 
+	// Get activity for OOB update
+	activity, err := h.store.GetTaskActivity(c.Context(), taskID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to get activity")
+	}
+
 	// Return the updated assignee section and task card OOB
-	return render(c, views.AssigneeUpdateResponse(taskWithDeps.ID, taskWithDeps.Assignees, orgID, projectID, *currentUser, taskWithDeps.Task, taskLabels))
+	return render(c, views.AssigneeUpdateResponseWithActivity(taskWithDeps.ID, taskWithDeps.Assignees, orgID, projectID, *currentUser, taskWithDeps.Task, taskLabels, activity))
 }
 
 // HandleSearchUsers searches for users in an organization
@@ -941,8 +968,14 @@ func (h *Handler) HandleAssignUser(c fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to get task labels")
 	}
 
+	// Get activity for OOB update
+	activity, err := h.store.GetTaskActivity(c.Context(), taskID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to get activity")
+	}
+
 	// Return the updated assignee section and task card OOB
-	return render(c, views.AssigneeUpdateResponse(taskWithDeps.ID, taskWithDeps.Assignees, orgID, projectID, *currentUser, taskWithDeps.Task, taskLabels))
+	return render(c, views.AssigneeUpdateResponseWithActivity(taskWithDeps.ID, taskWithDeps.Assignees, orgID, projectID, *currentUser, taskWithDeps.Task, taskLabels, activity))
 }
 
 // HandleAddMetadata adds a metadata key-value pair.
@@ -994,7 +1027,12 @@ func (h *Handler) HandleAddMetadata(c fiber.Ctx) error {
 		_ = h.store.CreateActivity(c.Context(), taskID, user.ID, "update", fmt.Sprintf("metadata:%s", key), oldVal, value)
 	}
 
-	return render(c, views.MetadataSection(taskID, orgID, projectID, task.Metadata))
+	activity, err := h.store.GetTaskActivity(c.Context(), taskID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to load activity")
+	}
+
+	return render(c, views.MetadataSectionWithActivity(taskID, orgID, projectID, task.Metadata, activity))
 }
 
 // HandleDeleteMetadata removes a metadata key.
@@ -1031,7 +1069,12 @@ func (h *Handler) HandleDeleteMetadata(c fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to reload task")
 	}
 
-	return render(c, views.MetadataSection(taskID, orgID, projectID, task.Metadata))
+	activity, err := h.store.GetTaskActivity(c.Context(), taskID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to load activity")
+	}
+
+	return render(c, views.MetadataSectionWithActivity(taskID, orgID, projectID, task.Metadata, activity))
 }
 
 // HandleUpdateMetadata updates an existing metadata key-value pair.
@@ -1103,7 +1146,12 @@ func (h *Handler) HandleUpdateMetadata(c fiber.Ctx) error {
 		_ = h.store.CreateActivity(c.Context(), taskID, user.ID, "update", fmt.Sprintf("metadata:%s", newKey), oldVal, value)
 	}
 
-	return render(c, views.MetadataSection(taskID, orgID, projectID, task.Metadata))
+	activity, err := h.store.GetTaskActivity(c.Context(), taskID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to load activity")
+	}
+
+	return render(c, views.MetadataSectionWithActivity(taskID, orgID, projectID, task.Metadata, activity))
 }
 
 // HandleUpdateColumn updates a task's column and moves it to the end of the new column.

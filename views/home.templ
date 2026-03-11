@@ -222,9 +222,21 @@ templ DependencySection(taskWithDeps model.TaskWithDependencies, orgID int64) {
 	@components.DependencySection(taskWithDeps, orgID)
 }
 
+// DependencySectionWithActivity returns dependency section and activity section OOB.
+templ DependencySectionWithActivity(taskWithDeps model.TaskWithDependencies, orgID int64, activity []model.TaskActivityRecord) {
+	@components.DependencySection(taskWithDeps, orgID)
+	@components.ActivitySection(taskWithDeps.ID, orgID, activity)
+}
+
 // MetadataSection wraps the component for use in handlers.
 templ MetadataSection(taskID int64, orgID int64, projectID int64, metadata model.TaskMetadata) {
 	@components.MetadataSection(taskID, orgID, projectID, metadata)
+}
+
+// MetadataSectionWithActivity returns metadata section and activity section OOB.
+templ MetadataSectionWithActivity(taskID int64, orgID int64, projectID int64, metadata model.TaskMetadata, activity []model.TaskActivityRecord) {
+	@components.MetadataSection(taskID, orgID, projectID, metadata)
+	@components.ActivitySection(taskID, orgID, activity)
 }
 
 // TaskFieldUpdateResponse returns the updated task card with OOB swap for the kanban board.
@@ -247,15 +259,44 @@ templ TaskFieldSectionUpdate(taskWithDeps model.TaskWithDependencies, orgID int6
 	@components.TaskCard(taskWithDeps.Task, labels, assignees, orgID, true)
 }
 
+// TaskFieldUpdateWithActivityResponse returns field section, task card, and activity section OOB.
+templ TaskFieldUpdateWithActivityResponse(taskWithDeps model.TaskWithDependencies, orgID int64, labels []model.Label, assignees []model.AssigneeInfo, field string, activity []model.TaskActivityRecord) {
+	switch field {
+	case "title":
+		@components.TitleSection(taskWithDeps, orgID, false)
+	case "description":
+		@components.DescriptionSection(taskWithDeps, orgID, false)
+	case "due_date":
+		@components.DueDateSection(taskWithDeps, orgID, false)
+	case "priority":
+		@components.PrioritySection(taskWithDeps, orgID, false)
+	}
+	@components.TaskCard(taskWithDeps.Task, labels, assignees, orgID, true)
+	@components.ActivitySection(taskWithDeps.ID, orgID, activity)
+}
+
 // LabelTaskCardUpdate returns only the task card with OOB swap for label changes.
 templ LabelTaskCardUpdate(task model.Task, orgID int64, labels []model.Label, assignees []model.AssigneeInfo) {
 	@components.TaskCard(task, labels, assignees, orgID, true)
+}
+
+// LabelTaskCardUpdateWithActivity returns task card and activity section OOB for label changes.
+templ LabelTaskCardUpdateWithActivity(task model.Task, orgID int64, labels []model.Label, assignees []model.AssigneeInfo, activity []model.TaskActivityRecord) {
+	@components.TaskCard(task, labels, assignees, orgID, true)
+	@components.ActivitySection(task.ID, orgID, activity)
 }
 
 // AssigneeUpdateResponse returns the assignee section and task card OOB update.
 templ AssigneeUpdateResponse(taskID int64, assignees []model.AssigneeInfo, orgID int64, projectID int64, currentUser model.User, task model.Task, labels []model.Label) {
 	@components.AssigneeSection(taskID, assignees, orgID, projectID, currentUser)
 	@components.TaskCard(task, labels, assignees, orgID, true)
+}
+
+// AssigneeUpdateResponseWithActivity returns assignee section, task card, and activity section OOB.
+templ AssigneeUpdateResponseWithActivity(taskID int64, assignees []model.AssigneeInfo, orgID int64, projectID int64, currentUser model.User, task model.Task, labels []model.Label, activity []model.TaskActivityRecord) {
+	@components.AssigneeSection(taskID, assignees, orgID, projectID, currentUser)
+	@components.TaskCard(task, labels, assignees, orgID, true)
+	@components.ActivitySection(taskID, orgID, activity)
 }
 
 // ColumnUpdateResponse returns OOB updates for column badge and kanban columns (no full pane reload).
